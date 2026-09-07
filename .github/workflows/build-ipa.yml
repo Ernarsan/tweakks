@@ -26,19 +26,10 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
           npx expo prebuild --platform ios --clean
-          # Отключаем подпись кода для всех зависимостей CocoaPods
-          ruby -e '
-            podfile = File.read("ios/Podfile")
-            patch = "\n    installer.pods_project.targets.each { |t| t.build_configurations.each { |c| c.build_settings[\"CODE_SIGNING_ALLOWED\"] = \"NO\"; c.build_settings[\"CODE_SIGNING_REQUIRED\"] = \"NO\" } }\n"
-            podfile.sub!("post_install do |installer|", "post_install do |installer|" + patch)
-            File.write("ios/Podfile", podfile)
-          '
-          cd ios && pod install
 
       - name: ⚙️ Сборка архива через Xcode (Real iPhone ARM64)
         run: |
           cd ios
-          # Находим основную схему приложения (исключая схемы Pods)
           SCHEME=$(xcodebuild -workspace *.xcworkspace -list -json | jq -r '.workspace.schemes[] | select(startswith("Pods-") | not)' | head -n 1)
           echo "Selected Scheme: $SCHEME"
           
