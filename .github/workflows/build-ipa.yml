@@ -34,20 +34,33 @@ jobs:
           xcodebuild -version
           npx expo prebuild --platform ios --clean
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
+          cd ios
+          pod install || pod install --repo-update
+          ls -la
 
       - name: ⚙️ Сборка .app через Xcode (Real iPhone ARM64)
         run: |
           cd ios
-          WS=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n 1)
-          echo "Using workspace: $WS"
+          echo "Files in ios directory:"
+          ls -la
           
-          SCHEME=$(xcodebuild -workspace "$WS" -list -json | jq -r '.workspace.schemes[] | select(startswith("Pods-") | not)' | head -n 1)
-          echo "Selected Scheme: $SCHEME"
+          if [ -d "TaskGoalsApp.xcworkspace" ]; then
+            WS="-workspace TaskGoalsApp.xcworkspace"
+          else
+            FOUND_WS=$(find . -name "*.xcworkspace" | head -n 1)
+            if [ -n "$FOUND_WS" ]; then
+              WS="-workspace $FOUND_WS"
+            else
+              WS="-project TaskGoalsApp.xcodeproj"
+            fi
+          fi
+          
+          echo "Building with: $WS"
           
           set -o pipefail
           xcodebuild \
-            -workspace "$WS" \
-            -scheme "$SCHEME" \
+            $WS \
+            -scheme "TaskGoalsApp" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
