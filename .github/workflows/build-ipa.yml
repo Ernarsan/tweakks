@@ -34,7 +34,7 @@ jobs:
           xcodebuild -version
           npx expo prebuild --platform ios --clean --no-install
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
-          npx pod-install ios
+          npx -y pod-install ios --verbose || (cd ios && pod install --repo-update)
           ls -la ios
 
       - name: ⚙️ Сборка .app через Xcode (Real iPhone ARM64)
@@ -43,9 +43,16 @@ jobs:
           echo "Listing ios directory:"
           ls -la
           
+          if [ -d "TaskGoalsApp.xcworkspace" ]; then
+            TARGET="-workspace TaskGoalsApp.xcworkspace"
+          else
+            TARGET="-project TaskGoalsApp.xcodeproj"
+          fi
+          echo "Building target: $TARGET"
+          
           set -o pipefail
           xcodebuild \
-            -workspace TaskGoalsApp.xcworkspace \
+            $TARGET \
             -scheme "TaskGoalsApp" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
