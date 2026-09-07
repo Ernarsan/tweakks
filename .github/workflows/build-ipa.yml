@@ -32,9 +32,9 @@ jobs:
         run: |
           sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
-          npx expo prebuild --platform ios --clean --no-install
+          npx expo prebuild --platform ios --clean
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
-          npx -y pod-install ios --verbose || (cd ios && pod install --repo-update)
+          echo "=== Files in ios directory ==="
           ls -la ios
 
       - name: ⚙️ Сборка .app через Xcode (Real iPhone ARM64)
@@ -45,8 +45,10 @@ jobs:
           
           if [ -d "TaskGoalsApp.xcworkspace" ]; then
             TARGET="-workspace TaskGoalsApp.xcworkspace"
+          elif ls *.xcworkspace 1>/dev/null 2>&1; then
+            TARGET="-workspace $(ls -d *.xcworkspace | head -n 1)"
           else
-            TARGET="-project TaskGoalsApp.xcodeproj"
+            TARGET="-project $(ls -d *.xcodeproj | head -n 1)"
           fi
           echo "Building target: $TARGET"
           
