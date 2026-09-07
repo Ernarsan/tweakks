@@ -38,12 +38,15 @@ jobs:
       - name: ⚙️ Сборка .app через Xcode (Real iPhone ARM64)
         run: |
           cd ios
-          SCHEME=$(xcodebuild -workspace *.xcworkspace -list -json | jq -r '.workspace.schemes[] | select(startswith("Pods-") | not)' | head -n 1)
+          WS=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n 1)
+          echo "Using workspace: $WS"
+          
+          SCHEME=$(xcodebuild -workspace "$WS" -list -json | jq -r '.workspace.schemes[] | select(startswith("Pods-") | not)' | head -n 1)
           echo "Selected Scheme: $SCHEME"
           
           set -o pipefail
           xcodebuild \
-            -workspace *.xcworkspace \
+            -workspace "$WS" \
             -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
@@ -53,8 +56,9 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER="" 2>&1 | tee xcode_build.log || {
-              echo "::error::Xcode build failed. Check logs."
-              tail -n 100 xcode_build.log
+              ERR_MSG=$(grep -E "error:|fatal error:" xcode_build.log | tail -n 5 | tr '\n' ' ' | cut -c 1-250)
+              echo "::error::Build error: $ERR_MSG"
+              tail -n 120 xcode_build.log
               exit 1
             }
 

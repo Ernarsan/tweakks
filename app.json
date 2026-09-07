@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Задачи и цели",
+    "name": "TaskGoalsApp",
     "slug": "task-goals-app",
     "owner": "ernar2",
     "version": "1.0.0",
@@ -13,6 +13,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.ernar2.taskgoalsapp",
       "infoPlist": {
+        "CFBundleDisplayName": "Задачи и цели",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
