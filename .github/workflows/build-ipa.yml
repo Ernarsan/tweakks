@@ -33,16 +33,23 @@ jobs:
           SCHEME=$(xcodebuild -workspace *.xcworkspace -list -json | jq -r '.workspace.schemes[] | select(startswith("Pods-") | not)' | head -n 1)
           echo "Selected Scheme: $SCHEME"
           
+          set -o pipefail
           xcodebuild archive \
             -workspace *.xcworkspace \
             -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath build/App.xcarchive \
+            CODE_SIGN_STYLE=Manual \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER=""
+            PROVISIONING_PROFILE_SPECIFIER="" 2>&1 | tee xcode_build.log || {
+              echo "❌❌❌ XCODEBUILD BUILD FAILED! RECENT LOG: ❌❌❌"
+              grep -E "error:|fatal error:|BUILD FAILED" xcode_build.log | head -n 30 || true
+              tail -n 100 xcode_build.log
+              exit 1
+            }
 
       - name: 📦 Упаковка в .ipa
         run: |
