@@ -64,7 +64,10 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER="" 2>&1 | tee xcode_build.log || {
-              tail -n 120 xcode_build.log
+              LOG_HEAD=$(head -n 25 xcode_build.log | tr '\n' ' ' | tr -d '"' | cut -c 1-400)
+              LOG_TAIL=$(tail -n 25 xcode_build.log | tr '\n' ' ' | tr -d '"' | cut -c 1-400)
+              echo "::error title=XcodeLogHead::$LOG_HEAD"
+              echo "::error title=XcodeLogTail::$LOG_TAIL"
               exit 1
             }
 
