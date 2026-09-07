@@ -30,9 +30,10 @@ jobs:
 
       - name: 📱 Выбор Xcode и генерация проекта
         run: |
+          sudo gem install cocoapods
           sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
-          npx expo prebuild --platform ios --clean
+          CI=false npx expo prebuild --platform ios --clean
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
           echo "=== Files in ios directory ==="
           ls -la ios
