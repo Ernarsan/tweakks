@@ -26,18 +26,28 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
           npx expo prebuild --platform ios --clean
+          # Отключаем подпись кода для всех зависимостей CocoaPods
+          ruby -e '
+            podfile = File.read("ios/Podfile")
+            patch = "\n    installer.pods_project.targets.each { |t| t.build_configurations.each { |c| c.build_settings[\"CODE_SIGNING_ALLOWED\"] = \"NO\"; c.build_settings[\"CODE_SIGNING_REQUIRED\"] = \"NO\" } }\n"
+            podfile.sub!("post_install do |installer|", "post_install do |installer|" + patch)
+            File.write("ios/Podfile", podfile)
+          '
+          cd ios && pod install
 
-      - name: ⚙️ Сборка .app через Xcode (Real iPhone ARM64)
+      - name: ⚙️ Сборка архива через Xcode (Real iPhone ARM64)
         run: |
           cd ios
-          SCHEME=$(xcodebuild -workspace *.xcworkspace -list -json | jq -r '.workspace.schemes[0]')
-          echo "Compiling scheme: $SCHEME for generic iOS physical device"
-          xcodebuild \
+          # Находим основную схему приложения (исключая схемы Pods)
+          SCHEME=$(xcodebuild -workspace *.xcworkspace -list -json | jq -r '.workspace.schemes[] | select(startswith("Pods-") | not)' | head -n 1)
+          echo "Selected Scheme: $SCHEME"
+          
+          xcodebuild archive \
             -workspace *.xcworkspace \
             -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -derivedDataPath build \
+            -archivePath build/App.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
@@ -46,8 +56,8 @@ jobs:
       - name: 📦 Упаковка в .ipa
         run: |
           mkdir -p build/Payload
-          APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
-          echo "Found app at: $APP_PATH"
+          APP_PATH=$(find ios/build/App.xcarchive/Products/Applications -name "*.app" | head -n 1)
+          echo "Packaging application from: $APP_PATH"
           cp -r "$APP_PATH" build/Payload/
           cd build
           zip -r TaskGoalsApp.ipa Payload
