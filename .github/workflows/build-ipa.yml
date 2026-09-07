@@ -21,13 +21,11 @@ jobs:
       - name: 📦 Установка зависимостей
         run: npm install --legacy-peer-deps
 
-      - name: 📱 Генерация нативного iOS проекта
-        run: npx expo prebuild --platform ios --clean --no-install
-
-      - name: 🍎 Установка CocoaPods зависимостей
+      - name: 📱 Выбор Xcode и генерация проекта
         run: |
-          cd ios
-          pod install
+          sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+          npx expo prebuild --platform ios --clean
 
       - name: ⚙️ Сборка .app через Xcode (Real iPhone ARM64)
         run: |
