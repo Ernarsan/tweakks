@@ -21,32 +21,39 @@ jobs:
       - name: 📦 Установка зависимостей
         run: npm install --legacy-peer-deps
 
+      - name: 🔗 Настройка окружения Node для Xcode
+        run: |
+          sudo mkdir -p /usr/local/bin
+          sudo ln -sf $(which node) /usr/local/bin/node
+          sudo ln -sf $(which node) /opt/homebrew/bin/node 2>/dev/null || true
+          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
+
       - name: 📱 Выбор Xcode и генерация проекта
         run: |
           sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
           npx expo prebuild --platform ios --clean
+          echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
 
-      - name: ⚙️ Сборка архива через Xcode (Real iPhone ARM64)
+      - name: ⚙️ Сборка .app через Xcode (Real iPhone ARM64)
         run: |
           cd ios
           SCHEME=$(xcodebuild -workspace *.xcworkspace -list -json | jq -r '.workspace.schemes[] | select(startswith("Pods-") | not)' | head -n 1)
           echo "Selected Scheme: $SCHEME"
           
           set -o pipefail
-          xcodebuild archive \
+          xcodebuild \
             -workspace *.xcworkspace \
             -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath build/App.xcarchive \
+            -derivedDataPath build \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER="" 2>&1 | tee xcode_build.log || {
-              echo "❌❌❌ XCODEBUILD BUILD FAILED! RECENT LOG: ❌❌❌"
-              grep -E "error:|fatal error:|BUILD FAILED" xcode_build.log | head -n 30 || true
+              echo "::error::Xcode build failed. Check logs."
               tail -n 100 xcode_build.log
               exit 1
             }
@@ -54,7 +61,7 @@ jobs:
       - name: 📦 Упаковка в .ipa
         run: |
           mkdir -p build/Payload
-          APP_PATH=$(find ios/build/App.xcarchive/Products/Applications -name "*.app" | head -n 1)
+          APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
           echo "Packaging application from: $APP_PATH"
           cp -r "$APP_PATH" build/Payload/
           cd build
@@ -67,4 +74,11 @@ jobs:
           name: TaskGoalsApp-ipa
           path: build/TaskGoalsApp.ipa
           retention-days: 14
+
+      - name: 📝 Выгрузка лога сборки при ошибке
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-error-log
+          path: ios/xcode_build.log
 
