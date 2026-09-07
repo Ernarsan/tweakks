@@ -32,34 +32,20 @@ jobs:
         run: |
           sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
-          npx expo prebuild --platform ios --clean
+          npx expo prebuild --platform ios --clean --no-install
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
-          cd ios
-          pod install || pod install --repo-update
-          ls -la
+          npx pod-install ios
+          ls -la ios
 
       - name: ⚙️ Сборка .app через Xcode (Real iPhone ARM64)
         run: |
           cd ios
-          echo "Files in ios directory:"
+          echo "Listing ios directory:"
           ls -la
-          
-          if [ -d "TaskGoalsApp.xcworkspace" ]; then
-            WS="-workspace TaskGoalsApp.xcworkspace"
-          else
-            FOUND_WS=$(find . -name "*.xcworkspace" | head -n 1)
-            if [ -n "$FOUND_WS" ]; then
-              WS="-workspace $FOUND_WS"
-            else
-              WS="-project TaskGoalsApp.xcodeproj"
-            fi
-          fi
-          
-          echo "Building with: $WS"
           
           set -o pipefail
           xcodebuild \
-            $WS \
+            -workspace TaskGoalsApp.xcworkspace \
             -scheme "TaskGoalsApp" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
@@ -69,8 +55,6 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER="" 2>&1 | tee xcode_build.log || {
-              ERR_MSG=$(grep -E "error:|fatal error:" xcode_build.log | tail -n 5 | tr '\n' ' ' | cut -c 1-250)
-              echo "::error::Build error: $ERR_MSG"
               tail -n 120 xcode_build.log
               exit 1
             }
