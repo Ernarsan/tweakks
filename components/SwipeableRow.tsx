@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Theme } from '../lib/theme';
 
 interface SwipeableRowProps {
   children: React.ReactNode;
@@ -18,7 +19,7 @@ interface SwipeableRowProps {
   confirmMessage?: string;
 }
 
-const BUTTON_WIDTH = 80;
+const BUTTON_WIDTH = 84;
 
 export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   children,
@@ -28,6 +29,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   confirmMessage = 'Это действие нельзя отменить.',
 }) => {
   const translateX = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
   const isOpenRef = useRef(false);
 
   const confirmDelete = () => {
@@ -71,7 +73,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
           newX -= BUTTON_WIDTH;
         }
         if (newX > 0) {
-          newX = newX * 0.2; // resistance when dragging right
+          newX = newX * 0.2;
         } else if (newX < -BUTTON_WIDTH * 1.5) {
           newX = -BUTTON_WIDTH * 1.5 + (newX + BUTTON_WIDTH * 1.5) * 0.2;
         }
@@ -92,8 +94,27 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     })
   ).current;
 
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.98,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 8,
+    }).start();
+  };
+
   return (
     <View style={styles.container}>
+      {/* Кнопка удаления сзади */}
       <View style={styles.actionContainer}>
         <Pressable
           style={({ pressed }) => [
@@ -107,15 +128,18 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         </Pressable>
       </View>
 
+      {/* Карточка */}
       <Animated.View
         style={[
           styles.content,
-          { transform: [{ translateX }] },
+          { transform: [{ translateX }, { scale }] },
         ]}
         {...panResponder.panHandlers}
       >
         <Pressable
           style={styles.pressable}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
           onPress={() => {
             if (isOpenRef.current) {
               closeRow();
@@ -135,8 +159,8 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     overflow: 'hidden',
-    borderRadius: 14,
-    marginBottom: 10,
+    borderRadius: Theme.radii.lg,
+    marginBottom: 12,
   },
   actionContainer: {
     position: 'absolute',
@@ -146,7 +170,9 @@ const styles = StyleSheet.create({
     width: BUTTON_WIDTH,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#DC2626',
+    borderTopRightRadius: Theme.radii.lg,
+    borderBottomRightRadius: Theme.radii.lg,
   },
   deleteButton: {
     flex: 1,
@@ -156,15 +182,18 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: 3,
   },
   content: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: Theme.colors.card,
+    borderRadius: Theme.radii.lg,
+    borderWidth: 1,
+    borderColor: Theme.colors.cardBorder,
+    ...Theme.shadows.card,
   },
   pressable: {
-    borderRadius: 14,
+    borderRadius: Theme.radii.lg,
   },
 });

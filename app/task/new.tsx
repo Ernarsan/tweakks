@@ -4,16 +4,18 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  Pressable,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { createTask, getGoals, Goal } from '../../lib/db';
+import { Theme } from '../../lib/theme';
 import { GoalPickerModal } from '../../components/GoalPickerModal';
+import { MotionPressable } from '../../components/MotionPressable';
 
 export default function NewTaskScreen() {
   const router = useRouter();
@@ -64,12 +66,12 @@ export default function NewTaskScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Название задачи *</Text>
+          <Text style={styles.sectionTitle}>НАЗВАНИЕ ЗАДАЧИ *</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
               placeholder="Например, Записаться к стоматологу"
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor="#64748B"
               value={title}
               onChangeText={setTitle}
               returnKeyType="next"
@@ -79,12 +81,12 @@ export default function NewTaskScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Описание</Text>
+          <Text style={styles.sectionTitle}>ОПИСАНИЕ</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={[styles.textInput, styles.textArea]}
               placeholder="Дополнительные детали, ссылки или заметки..."
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor="#64748B"
               value={description}
               onChangeText={setDescription}
               multiline
@@ -95,19 +97,16 @@ export default function NewTaskScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Привязка к цели</Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.pickerButton,
-              pressed && styles.pickerButtonPressed,
-            ]}
+          <Text style={styles.sectionTitle}>ПРИВЯЗКА К ЦЕЛИ</Text>
+          <MotionPressable
+            style={styles.pickerButton}
             onPress={() => setGoalPickerVisible(true)}
           >
             <View style={styles.pickerContent}>
               <Ionicons
                 name={selectedGoal ? 'flag' : 'flag-outline'}
-                size={20}
-                color={selectedGoal ? '#007AFF' : '#8E8E93'}
+                size={18}
+                color={selectedGoal ? '#818CF8' : '#64748B'}
               />
               <Text
                 style={[
@@ -119,23 +118,27 @@ export default function NewTaskScreen() {
                 {selectedGoal ? selectedGoal.title : 'Без цели'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
-          </Pressable>
+            <Ionicons name="chevron-forward" size={18} color="#64748B" />
+          </MotionPressable>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.submitButton,
-            saving && styles.submitButtonDisabled,
-            pressed && { opacity: 0.8 },
-          ]}
+        <MotionPressable
           onPress={handleSave}
           disabled={saving}
+          style={styles.submitContainer}
         >
-          <Text style={styles.submitButtonText}>
-            {saving ? 'Сохранение...' : 'Создать задачу'}
-          </Text>
-        </Pressable>
+          <LinearGradient
+            colors={Theme.colors.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.submitButton}
+          >
+            <Text style={styles.submitButtonText}>
+              {saving ? 'Сохранение...' : 'Создать задачу'}
+            </Text>
+            <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+          </LinearGradient>
+        </MotionPressable>
       </ScrollView>
 
       <GoalPickerModal
@@ -152,75 +155,79 @@ export default function NewTaskScreen() {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0F19',
   },
   scrollContent: {
-    padding: 16,
+    padding: 20,
     paddingBottom: 40,
   },
   section: {
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6C6C70',
-    textTransform: 'uppercase',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#818CF8',
+    letterSpacing: 0.8,
     marginBottom: 8,
     marginLeft: 4,
   },
   inputCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: '#131B2E',
+    borderRadius: Theme.radii.lg,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#232E48',
   },
   textInput: {
     fontSize: 16,
-    color: '#000000',
+    color: '#F8FAFC',
   },
   textArea: {
     minHeight: 90,
   },
   pickerButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: '#131B2E',
+    borderRadius: Theme.radii.lg,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  pickerButtonPressed: {
-    backgroundColor: '#F7F7F8',
+    borderWidth: 1,
+    borderColor: '#232E48',
   },
   pickerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     flex: 1,
   },
   pickerText: {
     fontSize: 16,
-    color: '#000000',
-    fontWeight: '500',
+    color: '#F8FAFC',
+    fontWeight: '600',
   },
   pickerPlaceholder: {
-    color: '#8E8E93',
+    color: '#64748B',
+    fontWeight: '400',
+  },
+  submitContainer: {
+    marginTop: 12,
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    flexDirection: 'row',
     paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: Theme.radii.lg,
     alignItems: 'center',
-    marginTop: 10,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
+    justifyContent: 'center',
+    gap: 8,
+    ...Theme.shadows.glowPrimary,
   },
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

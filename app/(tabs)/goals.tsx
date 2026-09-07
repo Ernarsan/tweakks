@@ -12,9 +12,12 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { getGoals, addGoalProgress, Goal } from '../../lib/db';
+import { Theme } from '../../lib/theme';
 import { ProgressBar } from '../../components/ProgressBar';
+import { MotionPressable } from '../../components/MotionPressable';
 
 export default function GoalsScreen() {
   const router = useRouter();
@@ -22,7 +25,7 @@ export default function GoalsScreen() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Модалка добавления прогресса прямо из списка
+  // Модалка добавления прогресса
   const [activeGoalForProgress, setActiveGoalForProgress] = useState<Goal | null>(null);
   const [progressDelta, setProgressDelta] = useState('');
 
@@ -44,12 +47,12 @@ export default function GoalsScreen() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Pressable
+        <MotionPressable
           onPress={() => router.push('/goal/new')}
-          style={({ pressed }) => [styles.headerAddBtn, pressed && { opacity: 0.6 }]}
+          style={styles.headerAddBtn}
         >
-          <Ionicons name="add" size={26} color="#007AFF" />
-        </Pressable>
+          <Ionicons name="add" size={24} color="#818CF8" />
+        </MotionPressable>
       ),
     });
   }, [navigation, router]);
@@ -85,59 +88,80 @@ export default function GoalsScreen() {
       Math.round((item.current_value / (item.target_value || 1)) * 100),
       100
     );
+    const isCompleted = item.current_value >= item.target_value && item.target_value > 0;
 
     return (
       <View style={styles.card}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.cardTopArea,
-            pressed && { opacity: 0.7 },
-          ]}
-          onPress={() => router.push(`/goal/${item.id}`)}
-        >
+        <MotionPressable onPress={() => router.push(`/goal/${item.id}`)}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.title}
-            </Text>
-            <Text style={styles.percentText}>{percent}%</Text>
+            <View style={styles.cardTitleContainer}>
+              <Text style={styles.cardTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              {item.deadline ? (
+                <View style={styles.deadlineContainer}>
+                  <Ionicons name="calendar-outline" size={12} color="#64748B" />
+                  <Text style={styles.deadlineText}>{item.deadline}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            <View
+              style={[
+                styles.percentBadge,
+                isCompleted && styles.percentBadgeCompleted,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.percentText,
+                  isCompleted && styles.percentTextCompleted,
+                ]}
+              >
+                {percent}%
+              </Text>
+            </View>
           </View>
 
           <View style={styles.progressSection}>
             <ProgressBar
               current={item.current_value}
               target={item.target_value}
-              height={9}
+              height={8}
             />
           </View>
-        </Pressable>
+        </MotionPressable>
 
         <View style={styles.cardFooter}>
           <View>
+            <Text style={styles.valuesLabel}>ПРОГРЕСС</Text>
             <Text style={styles.valuesText}>
-              {item.current_value} / {item.target_value}{unitStr}
+              {item.current_value}
+              <Text style={styles.valuesTotal}> / {item.target_value}{unitStr}</Text>
             </Text>
-            {item.deadline ? (
-              <View style={styles.deadlineContainer}>
-                <Ionicons name="calendar-outline" size={12} color="#8E8E93" />
-                <Text style={styles.deadlineText}>{item.deadline}</Text>
-              </View>
-            ) : null}
           </View>
 
-          {/* Кнопка быстрого добавления прогресса прямо на карточке */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.quickProgressBtn,
-              pressed && { opacity: 0.8 },
-            ]}
+          {/* Кнопка быстрого добавления прогресса */}
+          <MotionPressable
             onPress={() => {
               setActiveGoalForProgress(item);
               setProgressDelta('');
             }}
           >
-            <Ionicons name="add" size={16} color="#007AFF" />
-            <Text style={styles.quickProgressBtnText}>Прогресс</Text>
-          </Pressable>
+            <LinearGradient
+              colors={
+                isCompleted
+                  ? Theme.colors.gradients.success
+                  : Theme.colors.gradients.primary
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.quickProgressBtn}
+            >
+              <Ionicons name="add" size={16} color="#FFFFFF" />
+              <Text style={styles.quickProgressBtnText}>Прогресс</Text>
+            </LinearGradient>
+          </MotionPressable>
         </View>
       </View>
     );
@@ -147,16 +171,19 @@ export default function GoalsScreen() {
     <View style={styles.container}>
       {/* Кнопка создания цели сверху */}
       <View style={styles.topBar}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.createGoalTopBtn,
-            pressed && { opacity: 0.8 },
-          ]}
-          onPress={() => router.push('/goal/new')}
-        >
-          <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
-          <Text style={styles.createGoalTopBtnText}>Поставить новую цель</Text>
-        </Pressable>
+        <MotionPressable onPress={() => router.push('/goal/new')}>
+          <LinearGradient
+            colors={['#162038', '#111827']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.createGoalTopBtn}
+          >
+            <View style={styles.createGoalIconCircle}>
+              <Ionicons name="add" size={18} color="#818CF8" />
+            </View>
+            <Text style={styles.createGoalTopBtnText}>Поставить новую цель</Text>
+          </LinearGradient>
+        </MotionPressable>
       </View>
 
       <FlatList
@@ -168,20 +195,26 @@ export default function GoalsScreen() {
           goals.length === 0 && styles.emptyListContent,
         ]}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#818CF8"
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="flag-outline" size={56} color="#C7C7CC" />
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="flag-outline" size={32} color="#64748B" />
+            </View>
             <Text style={styles.emptyTitle}>Нет целей</Text>
             <Text style={styles.emptySubtitle}>
-              Нажмите кнопку выше, чтобы поставить свою первую цель
+              Нажмите кнопку сверху, чтобы сформулировать свою первую цель
             </Text>
           </View>
         }
       />
 
-      {/* Модалка добавления прогресса прямо из списка */}
+      {/* Модалка добавления прогресса */}
       <Modal
         visible={!!activeGoalForProgress}
         animationType="slide"
@@ -200,7 +233,7 @@ export default function GoalsScreen() {
               <TextInput
                 style={styles.deltaInput}
                 placeholder="0"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor="#64748B"
                 keyboardType="decimal-pad"
                 value={progressDelta}
                 onChangeText={setProgressDelta}
@@ -216,25 +249,34 @@ export default function GoalsScreen() {
             {/* Быстрые чипы */}
             <View style={styles.quickChipsRow}>
               {[100, 500, 1000, 5000].map((val) => (
-                <Pressable
+                <MotionPressable
                   key={val}
-                  style={styles.quickChip}
                   onPress={() => setProgressDelta(val.toString())}
                 >
-                  <Text style={styles.quickChipText}>+{val}</Text>
-                </Pressable>
+                  <View style={styles.quickChip}>
+                    <Text style={styles.quickChipText}>+{val}</Text>
+                  </View>
+                </MotionPressable>
               ))}
             </View>
 
             <View style={styles.modalBtnRow}>
+              <MotionPressable onPress={handleAddProgress}>
+                <LinearGradient
+                  colors={Theme.colors.gradients.primary}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.modalBtnPrimary}
+                >
+                  <Text style={styles.modalBtnPrimaryText}>Добавить к результату</Text>
+                </LinearGradient>
+              </MotionPressable>
+
               <Pressable
-                style={[styles.modalBtn, styles.modalBtnPrimary]}
-                onPress={handleAddProgress}
-              >
-                <Text style={styles.modalBtnPrimaryText}>Добавить</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalBtn, styles.modalBtnCancel]}
+                style={({ pressed }) => [
+                  styles.modalBtnCancel,
+                  pressed && { opacity: 0.6 },
+                ]}
                 onPress={() => setActiveGoalForProgress(null)}
               >
                 <Text style={styles.modalBtnCancelText}>Отмена</Text>
@@ -250,32 +292,39 @@ export default function GoalsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0F19',
   },
   headerAddBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    padding: 8,
+    marginRight: 4,
   },
   topBar: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E5EA',
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   createGoalTopBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E1EFFF',
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 8,
+    paddingVertical: 12,
+    borderRadius: Theme.radii.lg,
+    borderWidth: 1,
+    borderColor: '#232E48',
+    gap: 10,
+  },
+  createGoalIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   createGoalTopBtnText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: '#F8FAFC',
   },
   listContent: {
     padding: 16,
@@ -285,13 +334,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-  },
-  cardTopArea: {
-    marginBottom: 8,
+    backgroundColor: '#131B2E',
+    borderRadius: Theme.radii.lg,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#232E48',
+    ...Theme.shadows.card,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -299,79 +348,119 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  cardTitle: {
+  cardTitleContainer: {
     flex: 1,
+  },
+  cardTitle: {
     fontSize: 17,
-    fontWeight: '600',
-    color: '#000000',
-    lineHeight: 22,
-  },
-  percentText: {
-    fontSize: 15,
     fontWeight: '700',
-    color: '#007AFF',
-  },
-  progressSection: {
-    marginTop: 12,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#F2F2F7',
-    paddingTop: 10,
-  },
-  valuesText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#3C3C43',
+    color: '#F8FAFC',
+    lineHeight: 22,
   },
   deadlineContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 2,
+    marginTop: 6,
   },
   deadlineText: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  percentBadge: {
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Theme.radii.full,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.3)',
+  },
+  percentBadgeCompleted: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  percentText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#818CF8',
+  },
+  percentTextCompleted: {
+    color: '#34D399',
+  },
+  progressSection: {
+    marginVertical: 14,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#1A233A',
+    paddingTop: 12,
+  },
+  valuesLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 0.6,
+  },
+  valuesText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    marginTop: 2,
+  },
+  valuesTotal: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#64748B',
   },
   quickProgressBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E1EFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Theme.radii.full,
+    gap: 5,
   },
   quickProgressBtnText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingBottom: 40,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#131B2E',
+    borderWidth: 1,
+    borderColor: '#232E48',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#3C3C43',
-    marginTop: 12,
+    fontWeight: '700',
+    color: '#F8FAFC',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: '#64748B',
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 20,
   },
   safeAreaModal: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0F19',
   },
   modalContent: {
     flex: 1,
@@ -379,44 +468,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dragIndicator: {
-    width: 36,
+    width: 38,
     height: 5,
     borderRadius: 3,
-    backgroundColor: '#C7C7CC',
+    backgroundColor: '#334155',
     marginBottom: 20,
   },
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#000000',
+    color: '#F8FAFC',
     marginBottom: 6,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#636366',
+    color: '#94A3B8',
     marginBottom: 20,
     textAlign: 'center',
   },
   deltaInputCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: '#131B2E',
+    borderRadius: Theme.radii.lg,
+    borderWidth: 1,
+    borderColor: '#232E48',
     paddingHorizontal: 20,
     paddingVertical: 14,
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   deltaInput: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '700',
-    color: '#007AFF',
+    color: '#818CF8',
     textAlign: 'center',
   },
   deltaUnit: {
     fontSize: 20,
-    color: '#8E8E93',
+    color: '#64748B',
     fontWeight: '600',
     marginLeft: 8,
   },
@@ -426,40 +517,42 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   quickChip: {
-    backgroundColor: '#E5E5EA',
-    paddingHorizontal: 12,
+    backgroundColor: '#162038',
+    borderWidth: 1,
+    borderColor: '#232E48',
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 16,
+    borderRadius: Theme.radii.full,
   },
   quickChipText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: '#818CF8',
   },
   modalBtnRow: {
     width: '100%',
     gap: 10,
   },
-  modalBtn: {
-    paddingVertical: 14,
-    borderRadius: 14,
+  modalBtnPrimary: {
+    paddingVertical: 16,
+    borderRadius: Theme.radii.lg,
     alignItems: 'center',
     width: '100%',
-  },
-  modalBtnPrimary: {
-    backgroundColor: '#007AFF',
+    ...Theme.shadows.glowPrimary,
   },
   modalBtnPrimaryText: {
     color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
   },
   modalBtnCancel: {
-    backgroundColor: 'transparent',
+    paddingVertical: 12,
+    alignItems: 'center',
+    width: '100%',
   },
   modalBtnCancelText: {
-    color: '#8E8E93',
-    fontSize: 16,
+    color: '#64748B',
+    fontSize: 15,
     fontWeight: '500',
   },
 });

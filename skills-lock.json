@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "21st-dev-builder-v2": {
+      "source": "trin-zenityx/21st-dev-builder-v2",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "4b999823f09d4b428b2bf63ec12ce8a84a04658a44e334ec57c8f265594e3c54"
+    },
+    "aceternity-ui": {
+      "source": "secondsky/claude-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/aceternity-ui/skills/aceternity-ui/SKILL.md",
+      "computedHash": "46163dff7c0d895685b71f38179bd5feebd42cd66177addf20e21ecff95ce4b7"
+    },
+    "framer-motion-animator": {
+      "source": "patricio0312rev/skills",
+      "sourceType": "github",
+      "skillPath": "frontend/framer-motion-animator/SKILL.md",
+      "computedHash": "22a8401fab0cdf32d5c153b98aba5e95435a479810896879535dc7ac3710efbe"
+    }
+  }
+}

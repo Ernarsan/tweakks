@@ -10,6 +10,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import {
   getTasks,
@@ -19,9 +20,12 @@ import {
   Task,
   TaskStatus,
 } from '../../lib/db';
+import { Theme } from '../../lib/theme';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SwipeableRow } from '../../components/SwipeableRow';
 import { ReflectionModal } from '../../components/ReflectionModal';
+import { MotionPressable } from '../../components/MotionPressable';
+import { ProgressBar } from '../../components/ProgressBar';
 
 type FilterType = 'all' | TaskStatus;
 
@@ -39,11 +43,12 @@ export default function TasksScreen() {
   const [currentFilter, setCurrentFilter] = useState<FilterType>('all');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Быстрое добавление задачи сверху
+  // Быстрое добавление задачи
   const [quickTitle, setQuickTitle] = useState('');
+  const [inputFocused, setInputFocused] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // Рефлексия при быстром завершении задачи прямо из списка
+  // Рефлексия при быстром завершении
   const [completingTask, setCompletingTask] = useState<Task | null>(null);
 
   const loadTasks = useCallback(async (filter: FilterType) => {
@@ -64,12 +69,12 @@ export default function TasksScreen() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Pressable
+        <MotionPressable
           onPress={() => router.push('/task/new')}
-          style={({ pressed }) => [styles.headerAddBtn, pressed && { opacity: 0.6 }]}
+          style={styles.headerAddBtn}
         >
-          <Ionicons name="add" size={26} color="#007AFF" />
-        </Pressable>
+          <Ionicons name="add" size={24} color="#818CF8" />
+        </MotionPressable>
       ),
     });
   }, [navigation, router]);
@@ -80,7 +85,6 @@ export default function TasksScreen() {
     setRefreshing(false);
   };
 
-  // Быстрое создание задачи по кнопке сверху
   const handleQuickAdd = async () => {
     if (!quickTitle.trim() || creating) return;
 
@@ -100,7 +104,6 @@ export default function TasksScreen() {
     }
   };
 
-  // Быстрый старт задачи прямо из списка без захода внутрь
   const handleQuickStart = async (taskId: number) => {
     try {
       await updateTaskStatus(taskId, 'in_progress');
@@ -110,7 +113,6 @@ export default function TasksScreen() {
     }
   };
 
-  // Быстрое завершение: открывает ReflectionModal прямо из списка
   const handleQuickCompletePress = (task: Task) => {
     setCompletingTask(task);
   };
@@ -146,6 +148,11 @@ export default function TasksScreen() {
     }
   };
 
+  // Статистика для Bento-виджета
+  const completedCount = tasks.filter((t) => t.status === 'completed').length;
+  const inProgressCount = tasks.filter((t) => t.status === 'in_progress').length;
+  const totalCount = tasks.length;
+
   const renderItem = ({ item }: { item: Task }) => {
     return (
       <SwipeableRow
@@ -154,37 +161,39 @@ export default function TasksScreen() {
         confirmTitle="Удалить задачу?"
         confirmMessage={`Вы уверены, что хотите удалить «${item.title}»?`}
       >
-        <View style={styles.card}>
+        <View style={styles.cardInner}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle} numberOfLines={2}>
               {item.title}
             </Text>
 
-            {/* Кнопка действия прямо на карточке сверху */}
+            {/* Кнопка действия сверху на карточке */}
             {item.status === 'not_started' && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.actionBtnStart,
-                  pressed && { opacity: 0.7 },
-                ]}
-                onPress={() => handleQuickStart(item.id)}
-              >
-                <Ionicons name="play" size={13} color="#007AFF" />
-                <Text style={styles.actionBtnStartText}>Начать</Text>
-              </Pressable>
+              <MotionPressable onPress={() => handleQuickStart(item.id)}>
+                <LinearGradient
+                  colors={['rgba(99, 102, 241, 0.25)', 'rgba(99, 102, 241, 0.15)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.actionBtnStart}
+                >
+                  <Ionicons name="play" size={12} color="#818CF8" />
+                  <Text style={styles.actionBtnStartText}>Начать</Text>
+                </LinearGradient>
+              </MotionPressable>
             )}
 
             {item.status === 'in_progress' && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.actionBtnComplete,
-                  pressed && { opacity: 0.8 },
-                ]}
-                onPress={() => handleQuickCompletePress(item)}
-              >
-                <Ionicons name="checkmark" size={14} color="#FFFFFF" />
-                <Text style={styles.actionBtnCompleteText}>Завершить</Text>
-              </Pressable>
+              <MotionPressable onPress={() => handleQuickCompletePress(item)}>
+                <LinearGradient
+                  colors={Theme.colors.gradients.success}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.actionBtnComplete}
+                >
+                  <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                  <Text style={styles.actionBtnCompleteText}>Завершить</Text>
+                </LinearGradient>
+              </MotionPressable>
             )}
 
             {item.status === 'completed' && (
@@ -200,7 +209,7 @@ export default function TasksScreen() {
 
           {item.goal_title ? (
             <View style={styles.goalTag}>
-              <Ionicons name="flag-outline" size={13} color="#5856D6" />
+              <Ionicons name="flag" size={12} color="#818CF8" />
               <Text style={styles.goalTagText} numberOfLines={1}>
                 {item.goal_title}
               </Text>
@@ -213,52 +222,101 @@ export default function TasksScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Панель быстрого добавления задачи прямо сверху */}
-      <View style={styles.quickAddContainer}>
-        <TextInput
-          style={styles.quickInput}
-          placeholder="Новая задача..."
-          placeholderTextColor="#8E8E93"
-          value={quickTitle}
-          onChangeText={setQuickTitle}
-          onSubmitEditing={handleQuickAdd}
-          returnKeyType="done"
-        />
-        <Pressable
-          style={({ pressed }) => [
-            styles.quickAddButton,
-            !quickTitle.trim() && styles.quickAddButtonDisabled,
-            pressed && { opacity: 0.8 },
-          ]}
-          onPress={handleQuickAdd}
-          disabled={!quickTitle.trim() || creating}
+      {/* Bento Stats Banner (в стиле 21st.dev) */}
+      <View style={styles.statsBanner}>
+        <LinearGradient
+          colors={['#162038', '#111827']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.statsGradient}
         >
-          <Ionicons name="add" size={24} color="#FFFFFF" />
-        </Pressable>
+          <View style={styles.statsTopRow}>
+            <View>
+              <Text style={styles.statsLabel}>ПРОДУКТИВНОСТЬ</Text>
+              <Text style={styles.statsValue}>
+                {completedCount} <Text style={styles.statsTotal}>из {totalCount} выполнено</Text>
+              </Text>
+            </View>
+            <View style={styles.inProgressBadge}>
+              <View style={styles.inProgressDot} />
+              <Text style={styles.inProgressText}>{inProgressCount} в работе</Text>
+            </View>
+          </View>
+
+          <ProgressBar
+            current={completedCount}
+            target={totalCount}
+            height={6}
+            style={styles.statsProgress}
+          />
+        </LinearGradient>
       </View>
 
-      {/* Фильтры сверху */}
+      {/* Быстрое добавление задачи прямо сверху */}
+      <View style={styles.quickAddWrapper}>
+        <View style={[styles.quickAddContainer, inputFocused && styles.quickAddContainerFocused]}>
+          <TextInput
+            style={styles.quickInput}
+            placeholder="Что нужно сделать?.."
+            placeholderTextColor="#64748B"
+            value={quickTitle}
+            onChangeText={setQuickTitle}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
+            onSubmitEditing={handleQuickAdd}
+            returnKeyType="done"
+          />
+          <MotionPressable
+            onPress={handleQuickAdd}
+            disabled={!quickTitle.trim() || creating}
+          >
+            <LinearGradient
+              colors={
+                quickTitle.trim()
+                  ? Theme.colors.gradients.primary
+                  : (['#1E293B', '#1E293B'] as [string, string])
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.quickAddButton}
+            >
+              <Ionicons
+                name="add"
+                size={22}
+                color={quickTitle.trim() ? '#FFFFFF' : '#64748B'}
+              />
+            </LinearGradient>
+          </MotionPressable>
+        </View>
+      </View>
+
+      {/* Фильтры в стиле Aceternity UI */}
       <View style={styles.filtersContainer}>
         {FILTERS.map((f) => {
           const isActive = currentFilter === f.key;
           return (
-            <Pressable
+            <MotionPressable
               key={f.key}
-              style={[styles.filterChip, isActive && styles.filterChipActive]}
               onPress={() => {
                 setCurrentFilter(f.key);
                 loadTasks(f.key);
               }}
             >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  isActive && styles.filterChipTextActive,
-                ]}
-              >
-                {f.label}
-              </Text>
-            </Pressable>
+              {isActive ? (
+                <LinearGradient
+                  colors={Theme.colors.gradients.primary}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.filterChipActive}
+                >
+                  <Text style={styles.filterChipTextActive}>{f.label}</Text>
+                </LinearGradient>
+              ) : (
+                <View style={styles.filterChip}>
+                  <Text style={styles.filterChipText}>{f.label}</Text>
+                </View>
+              )}
+            </MotionPressable>
           );
         })}
       </View>
@@ -273,22 +331,28 @@ export default function TasksScreen() {
           tasks.length === 0 && styles.emptyListContent,
         ]}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#818CF8"
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="checkbox-outline" size={56} color="#C7C7CC" />
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="sparkles-outline" size={32} color="#64748B" />
+            </View>
             <Text style={styles.emptyTitle}>Нет задач</Text>
             <Text style={styles.emptySubtitle}>
               {currentFilter === 'all'
-                ? 'Введите задачу в поле сверху и нажмите «+», чтобы создать ее мгновенно'
-                : 'В этой категории пока нет задач'}
+                ? 'Введите название задачи в строке выше и нажмите «+»'
+                : 'В этой категории пока пусто'}
             </Text>
           </View>
         }
       />
 
-      {/* Модалка рефлексии при завершении задачи прямо из списка */}
+      {/* Модалка рефлексии */}
       <ReflectionModal
         visible={!!completingTask}
         initialValue={completingTask?.reflection}
@@ -302,68 +366,131 @@ export default function TasksScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0F19',
   },
   headerAddBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    padding: 8,
+    marginRight: 4,
+  },
+  statsBanner: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  statsGradient: {
+    borderRadius: Theme.radii.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#232E48',
+  },
+  statsTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  statsLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#818CF8',
+    letterSpacing: 0.8,
+  },
+  statsValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    marginTop: 2,
+  },
+  statsTotal: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#94A3B8',
+  },
+  inProgressBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Theme.radii.full,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.3)',
+  },
+  inProgressDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#818CF8',
+  },
+  inProgressText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#A5B4FC',
+  },
+  statsProgress: {
+    marginTop: 2,
+  },
+  quickAddWrapper: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   quickAddContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E5EA',
-    gap: 10,
+    backgroundColor: '#131B2E',
+    borderRadius: Theme.radii.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#232E48',
+    gap: 8,
+  },
+  quickAddContainerFocused: {
+    borderColor: '#6366F1',
+    backgroundColor: '#162038',
   },
   quickInput: {
     flex: 1,
-    height: 42,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    fontSize: 16,
-    color: '#000000',
+    height: 40,
+    fontSize: 15,
+    color: '#F8FAFC',
   },
   quickAddButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: '#007AFF',
+    width: 36,
+    height: 36,
+    borderRadius: Theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  quickAddButtonDisabled: {
-    backgroundColor: '#B0D5FF',
   },
   filtersContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E5EA',
+    paddingVertical: 8,
     gap: 8,
   },
   filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#F2F2F7',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Theme.radii.full,
+    backgroundColor: '#131B2E',
+    borderWidth: 1,
+    borderColor: '#232E48',
   },
   filterChipActive: {
-    backgroundColor: '#007AFF',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Theme.radii.full,
   },
   filterChipText: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#3C3C43',
+    fontWeight: '600',
+    color: '#94A3B8',
   },
   filterChipTextActive: {
+    fontSize: 13,
+    fontWeight: '700',
     color: '#FFFFFF',
-    fontWeight: '600',
   },
   listContent: {
     padding: 16,
@@ -372,88 +499,100 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  card: {
+  cardInner: {
     padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 12,
   },
   cardTitle: {
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#F8FAFC',
     lineHeight: 22,
   },
   actionBtnStart: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E1EFFF',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
-    gap: 4,
+    borderRadius: Theme.radii.full,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.4)',
+    gap: 5,
   },
   actionBtnStartText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#007AFF',
+    color: '#A5B4FC',
   },
   actionBtnComplete: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#34C759',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
-    gap: 4,
+    borderRadius: Theme.radii.full,
+    gap: 5,
+    ...Theme.shadows.glowSuccess,
   },
   actionBtnCompleteText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   cardDesc: {
     fontSize: 14,
-    color: '#636366',
-    marginTop: 6,
-    lineHeight: 18,
+    color: '#94A3B8',
+    marginTop: 8,
+    lineHeight: 20,
   },
   goalTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 10,
+    gap: 6,
+    marginTop: 12,
     alignSelf: 'flex-start',
-    backgroundColor: '#F0EFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Theme.radii.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.25)',
   },
   goalTagText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#5856D6',
+    fontWeight: '600',
+    color: '#A5B4FC',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingBottom: 40,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#131B2E',
+    borderWidth: 1,
+    borderColor: '#232E48',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#3C3C43',
-    marginTop: 12,
+    fontWeight: '700',
+    color: '#F8FAFC',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: '#64748B',
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 20,

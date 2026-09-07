@@ -2,6 +2,7 @@
   "expo": {
     "name": "Задачи и цели",
     "slug": "task-goals-app",
+    "owner": "ernar2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,7 +11,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.taskgoalsapp"
+      "bundleIdentifier": "com.ernar2.taskgoalsapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,6 +31,12 @@
     "plugins": [
       "expo-router",
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "46120154-c7b3-4890-a195-3c3c982a068c"
+      }
+    }
   }
 }

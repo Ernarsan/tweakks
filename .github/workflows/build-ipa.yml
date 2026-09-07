@@ -1,0 +1,64 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-ipa:
+    runs-on: macos-14
+    steps:
+      - name: ⬇️ Проверка репозитория
+        uses: actions/checkout@v4
+
+      - name: 🟢 Настройка Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Установка зависимостей
+        run: npm install --legacy-peer-deps
+
+      - name: 📱 Генерация нативного iOS проекта
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: 🍎 Установка CocoaPods зависимостей
+        run: |
+          cd ios
+          pod install
+
+      - name: ⚙️ Сборка .app через Xcode (Real iPhone ARM64)
+        run: |
+          cd ios
+          SCHEME=$(xcodebuild -workspace *.xcworkspace -list -json | jq -r '.workspace.schemes[0]')
+          echo "Compiling scheme: $SCHEME for generic iOS physical device"
+          xcodebuild \
+            -workspace *.xcworkspace \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
+
+      - name: 📦 Упаковка в .ipa
+        run: |
+          mkdir -p build/Payload
+          APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          echo "Found app at: $APP_PATH"
+          cp -r "$APP_PATH" build/Payload/
+          cd build
+          zip -r TaskGoalsApp.ipa Payload
+          cd ..
+
+      - name: 🚀 Выгрузка готового TaskGoalsApp.ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: TaskGoalsApp-ipa
+          path: build/TaskGoalsApp.ipa
+          retention-days: 14
+

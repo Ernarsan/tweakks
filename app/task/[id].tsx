@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import {
   getTaskById,
@@ -22,9 +23,11 @@ import {
   Task,
   Goal,
 } from '../../lib/db';
+import { Theme } from '../../lib/theme';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ReflectionModal } from '../../components/ReflectionModal';
 import { GoalPickerModal } from '../../components/GoalPickerModal';
+import { MotionPressable } from '../../components/MotionPressable';
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -97,18 +100,17 @@ export default function TaskDetailScreen() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Pressable
+        <MotionPressable
           onPress={handleSaveDetails}
           disabled={saving}
-          style={({ pressed }) => [styles.headerSaveBtn, pressed && { opacity: 0.6 }]}
+          style={styles.headerSaveBtn}
         >
           <Text style={styles.headerSaveText}>{saving ? '...' : 'Сохранить'}</Text>
-        </Pressable>
+        </MotionPressable>
       ),
     });
   }, [navigation, handleSaveDetails, saving]);
 
-  // Смена статуса по порядку: «Начать» -> «Завершить»
   const handleStart = async () => {
     try {
       await updateTaskStatus(taskId, 'in_progress');
@@ -180,7 +182,7 @@ export default function TaskDetailScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#818CF8" />
       </View>
     );
   }
@@ -209,38 +211,38 @@ export default function TaskDetailScreen() {
       >
         {/* Верхняя панель статуса */}
         <View style={styles.statusSection}>
-          <Text style={styles.sectionLabel}>Текущий статус</Text>
+          <Text style={styles.sectionLabel}>ТЕКУЩИЙ СТАТУС</Text>
           <StatusBadge status={task.status} />
         </View>
 
         {/* Кнопки смены статуса */}
         <View style={styles.actionBlock}>
           {task.status === 'not_started' && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryActionButton,
-                { backgroundColor: '#007AFF' },
-                pressed && { opacity: 0.8 },
-              ]}
-              onPress={handleStart}
-            >
-              <Ionicons name="play" size={18} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Начать выполнение</Text>
-            </Pressable>
+            <MotionPressable onPress={handleStart}>
+              <LinearGradient
+                colors={Theme.colors.gradients.primary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.primaryActionButton}
+              >
+                <Ionicons name="play" size={18} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Начать выполнение</Text>
+              </LinearGradient>
+            </MotionPressable>
           )}
 
           {task.status === 'in_progress' && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryActionButton,
-                { backgroundColor: '#34C759' },
-                pressed && { opacity: 0.8 },
-              ]}
-              onPress={handleCompletePress}
-            >
-              <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Завершить задачу</Text>
-            </Pressable>
+            <MotionPressable onPress={handleCompletePress}>
+              <LinearGradient
+                colors={Theme.colors.gradients.success}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.primaryActionButton}
+              >
+                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Завершить задачу</Text>
+              </LinearGradient>
+            </MotionPressable>
           )}
 
           {task.status === 'completed' && (
@@ -251,17 +253,17 @@ export default function TaskDetailScreen() {
               ]}
               onPress={handleReopen}
             >
-              <Ionicons name="refresh" size={16} color="#8E8E93" />
+              <Ionicons name="refresh" size={16} color="#818CF8" />
               <Text style={styles.reopenButtonText}>Вернуть в статус «В процессе»</Text>
             </Pressable>
           )}
         </View>
 
-        {/* Блок рефлексии, если задача завершена и текст есть */}
+        {/* Блок рефлексии */}
         {task.status === 'completed' && task.reflection ? (
           <View style={styles.reflectionCard}>
             <View style={styles.reflectionHeader}>
-              <Ionicons name="chatbox-ellipses" size={20} color="#5856D6" />
+              <Ionicons name="chatbox-ellipses" size={18} color="#818CF8" />
               <Text style={styles.reflectionTitle}>Рефлексия после завершения</Text>
             </View>
             <Text style={styles.reflectionContent}>{task.reflection}</Text>
@@ -281,27 +283,27 @@ export default function TaskDetailScreen() {
 
         {/* Редактируемые поля */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Название задачи</Text>
+          <Text style={styles.sectionLabel}>НАЗВАНИЕ ЗАДАЧИ</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
               value={title}
               onChangeText={setTitle}
               placeholder="Название задачи"
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor="#64748B"
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Описание</Text>
+          <Text style={styles.sectionLabel}>ОПИСАНИЕ</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={[styles.textInput, styles.textArea]}
               value={description}
               onChangeText={setDescription}
               placeholder="Дополнительные детали..."
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor="#64748B"
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -310,19 +312,16 @@ export default function TaskDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Привязанная цель</Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.pickerButton,
-              pressed && styles.pickerButtonPressed,
-            ]}
+          <Text style={styles.sectionLabel}>ПРИВЯЗАННАЯ ЦЕЛЬ</Text>
+          <MotionPressable
+            style={styles.pickerButton}
             onPress={() => setGoalPickerVisible(true)}
           >
             <View style={styles.pickerContent}>
               <Ionicons
                 name={selectedGoal ? 'flag' : 'flag-outline'}
-                size={20}
-                color={selectedGoal ? '#007AFF' : '#8E8E93'}
+                size={18}
+                color={selectedGoal ? '#818CF8' : '#64748B'}
               />
               <Text
                 style={[
@@ -334,8 +333,8 @@ export default function TaskDetailScreen() {
                 {selectedGoal ? selectedGoal.title : 'Без цели'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
-          </Pressable>
+            <Ionicons name="chevron-forward" size={18} color="#64748B" />
+          </MotionPressable>
         </View>
 
         {/* Кнопка удаления */}
@@ -346,7 +345,7 @@ export default function TaskDetailScreen() {
           ]}
           onPress={handleDelete}
         >
-          <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+          <Ionicons name="trash-outline" size={18} color="#EF4444" />
           <Text style={styles.deleteButtonText}>Удалить задачу</Text>
         </Pressable>
       </ScrollView>
@@ -374,10 +373,10 @@ export default function TaskDetailScreen() {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0F19',
   },
   scrollContent: {
-    padding: 16,
+    padding: 20,
     paddingBottom: 40,
   },
   center: {
@@ -385,21 +384,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0F19',
   },
   notFoundText: {
     fontSize: 17,
-    color: '#3C3C43',
+    color: '#94A3B8',
     marginBottom: 16,
   },
   backBtn: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
+    backgroundColor: '#131B2E',
+    borderRadius: Theme.radii.md,
+    borderWidth: 1,
+    borderColor: '#232E48',
   },
   backBtnText: {
-    color: '#FFFFFF',
+    color: '#818CF8',
     fontWeight: '600',
   },
   headerSaveBtn: {
@@ -407,18 +408,20 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   headerSaveText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#818CF8',
   },
   statusSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#131B2E',
     padding: 16,
-    borderRadius: 14,
+    borderRadius: Theme.radii.lg,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#232E48',
   },
   actionBlock: {
     marginBottom: 16,
@@ -427,14 +430,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: 16,
+    borderRadius: Theme.radii.lg,
     gap: 8,
+    ...Theme.shadows.glowPrimary,
   },
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   reopenButton: {
     flexDirection: 'row',
@@ -444,16 +448,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   reopenButtonText: {
-    color: '#8E8E93',
+    color: '#818CF8',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   reflectionCard: {
-    backgroundColor: '#F5F4FF',
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
     borderWidth: 1,
-    borderColor: '#D8D5FF',
-    borderRadius: 14,
-    padding: 16,
+    borderColor: 'rgba(99, 102, 241, 0.25)',
+    borderRadius: Theme.radii.lg,
+    padding: 18,
     marginBottom: 20,
   },
   reflectionHeader: {
@@ -463,69 +467,72 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   reflectionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#5856D6',
+    color: '#818CF8',
+    letterSpacing: 0.2,
   },
   reflectionContent: {
     fontSize: 15,
-    color: '#1C1C1E',
+    color: '#F8FAFC',
     lineHeight: 22,
   },
   completedAtText: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: '#64748B',
     marginTop: 10,
   },
   section: {
     marginBottom: 18,
   },
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6C6C70',
-    textTransform: 'uppercase',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#818CF8',
+    letterSpacing: 0.8,
     marginBottom: 8,
     marginLeft: 4,
   },
   inputCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: '#131B2E',
+    borderRadius: Theme.radii.lg,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#232E48',
   },
   textInput: {
     fontSize: 16,
-    color: '#000000',
+    color: '#F8FAFC',
   },
   textArea: {
     minHeight: 80,
   },
   pickerButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: '#131B2E',
+    borderRadius: Theme.radii.lg,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  pickerButtonPressed: {
-    backgroundColor: '#F7F7F8',
+    borderWidth: 1,
+    borderColor: '#232E48',
   },
   pickerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     flex: 1,
   },
   pickerText: {
     fontSize: 16,
-    color: '#000000',
-    fontWeight: '500',
+    color: '#F8FAFC',
+    fontWeight: '600',
   },
   pickerPlaceholder: {
-    color: '#8E8E93',
+    color: '#64748B',
+    fontWeight: '400',
   },
   deleteButton: {
     flexDirection: 'row',
@@ -536,8 +543,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   deleteButtonText: {
-    color: '#FF3B30',
-    fontSize: 16,
-    fontWeight: '500',
+    color: '#EF4444',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

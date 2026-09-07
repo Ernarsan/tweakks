@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { initDatabase } from '../lib/db';
+import { Theme } from '../lib/theme';
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
@@ -28,27 +29,27 @@ export default function RootLayout() {
   if (!dbReady) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#6366F1" />
       </View>
     );
   }
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: '#0B0F19',
           },
-          headerTintColor: '#007AFF',
+          headerTintColor: '#818CF8',
           headerTitleStyle: {
-            fontWeight: '600',
-            color: '#000000',
+            fontWeight: '700',
+            color: '#F8FAFC',
           },
           headerShadowVisible: false,
           contentStyle: {
-            backgroundColor: '#F2F2F7',
+            backgroundColor: '#0B0F19',
           },
         }}
       >
@@ -96,11 +97,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0F19',
   },
   errorText: {
     fontSize: 16,
-    color: '#FF3B30',
+    color: '#EF4444',
     textAlign: 'center',
   },
 });

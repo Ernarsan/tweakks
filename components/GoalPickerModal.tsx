@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Goal } from '../lib/db';
+import { Theme } from '../lib/theme';
+import { MotionPressable } from './MotionPressable';
 
 interface GoalPickerModalProps {
   visible: boolean;
@@ -49,7 +51,18 @@ export const GoalPickerModal: React.FC<GoalPickerModalProps> = ({
           </View>
 
           <FlatList
-            data={[{ id: -1, title: 'Без цели', target_value: 0, current_value: 0, unit: null, deadline: null, created_at: '' }, ...goals]}
+            data={[
+              {
+                id: -1,
+                title: 'Без цели',
+                target_value: 0,
+                current_value: 0,
+                unit: null,
+                deadline: null,
+                created_at: '',
+              },
+              ...goals,
+            ]}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => {
@@ -57,10 +70,10 @@ export const GoalPickerModal: React.FC<GoalPickerModalProps> = ({
               const isSelected = isNone ? selectedGoalId === null : selectedGoalId === item.id;
 
               return (
-                <Pressable
-                  style={({ pressed }) => [
+                <MotionPressable
+                  style={[
                     styles.goalItem,
-                    pressed && styles.itemPressed,
+                    isSelected && styles.goalItemSelected,
                   ]}
                   onPress={() => {
                     onSelectGoal(isNone ? null : item.id);
@@ -68,19 +81,29 @@ export const GoalPickerModal: React.FC<GoalPickerModalProps> = ({
                   }}
                 >
                   <View style={styles.goalInfo}>
-                    <Text style={[styles.goalTitle, isNone && styles.noGoalTitle]}>
-                      {item.title}
-                    </Text>
+                    <View style={styles.titleRow}>
+                      <Ionicons
+                        name={isNone ? 'file-tray-outline' : 'flag'}
+                        size={18}
+                        color={isSelected ? '#818CF8' : '#64748B'}
+                      />
+                      <Text style={[styles.goalTitle, isSelected && styles.goalTitleSelected]}>
+                        {item.title}
+                      </Text>
+                    </View>
                     {!isNone && (
                       <Text style={styles.goalMeta}>
-                        Прогресс: {item.current_value} / {item.target_value}{item.unit ? ` ${item.unit}` : ''}
+                        Прогресс: {item.current_value} / {item.target_value}
+                        {item.unit ? ` ${item.unit}` : ''}
                       </Text>
                     )}
                   </View>
                   {isSelected && (
-                    <Ionicons name="checkmark-circle" size={22} color="#007AFF" />
+                    <View style={styles.checkBadge}>
+                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                    </View>
                   )}
-                </Pressable>
+                </MotionPressable>
               );
             }}
           />
@@ -93,25 +116,25 @@ export const GoalPickerModal: React.FC<GoalPickerModalProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0F19',
   },
   container: {
     flex: 1,
     paddingTop: 12,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#C6C6C8',
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
     alignItems: 'center',
   },
   dragIndicator: {
-    width: 36,
+    width: 38,
     height: 5,
     borderRadius: 3,
-    backgroundColor: '#C7C7CC',
-    marginBottom: 12,
+    backgroundColor: '#334155',
+    marginBottom: 16,
   },
   headerRow: {
     flexDirection: 'row',
@@ -122,48 +145,65 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#000000',
+    color: '#F8FAFC',
   },
   closeBtn: {
     paddingVertical: 4,
     paddingHorizontal: 8,
   },
   closeText: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: '#818CF8',
   },
   listContent: {
     padding: 16,
+    gap: 10,
   },
   goalItem: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#131B2E',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 10,
+    borderRadius: Theme.radii.lg,
+    borderWidth: 1,
+    borderColor: '#232E48',
   },
-  itemPressed: {
-    backgroundColor: '#E5E5EA',
+  goalItemSelected: {
+    borderColor: '#6366F1',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
   },
   goalInfo: {
     flex: 1,
     marginRight: 12,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   goalTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#E2E8F0',
   },
-  noGoalTitle: {
-    color: '#8E8E93',
-    fontWeight: '500',
+  goalTitleSelected: {
+    color: '#F8FAFC',
+    fontWeight: '700',
   },
   goalMeta: {
     fontSize: 13,
-    color: '#8E8E93',
-    marginTop: 4,
+    color: '#94A3B8',
+    marginTop: 6,
+    marginLeft: 28,
+  },
+  checkBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#6366F1',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
