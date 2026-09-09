@@ -10,10 +10,8 @@ import {
   Platform,
   SafeAreaView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Theme } from '../lib/theme';
-import { MotionPressable } from './MotionPressable';
+import { THEME } from '../lib/theme';
 
 interface ReflectionModalProps {
   visible: boolean;
@@ -53,28 +51,35 @@ export const ReflectionModal: React.FC<ReflectionModalProps> = ({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.container}
         >
+          {/* Верхняя шапка */}
           <View style={styles.header}>
             <View style={styles.dragIndicator} />
-            <View style={styles.iconCircle}>
-              <Ionicons name="sparkles" size={24} color="#818CF8" />
+
+            <View style={styles.badgeTop}>
+              <Ionicons name="sparkles" size={13} color={THEME.colors.primary} />
+              <Text style={styles.badgeTopText}>РЕФЛЕКСИЯ</Text>
             </View>
+
             <Text style={styles.title}>Как это было?</Text>
             <Text style={styles.subtitle}>
-              Зафиксируйте инсайты, выводы или сложности. Рефлексия помогает закреплять опыт.
+              Зафиксируйте инсайты, выводы или сложности. Рефлексия помогает лучше понимать свой темп и праздновать победы.
             </Text>
           </View>
 
-          <View style={styles.inputContainer}>
+          {/* Поле ввода в стиле Aceternity Card */}
+          <View
+            style={[
+              styles.inputCard,
+              isFocused && styles.inputCardFocused,
+            ]}
+          >
             <TextInput
-              style={[
-                styles.input,
-                isFocused && styles.inputFocused,
-              ]}
+              style={styles.input}
               multiline
-              numberOfLines={5}
+              numberOfLines={6}
               textAlignVertical="top"
-              placeholder="Что получилось? Какой опыт извлекли?.."
-              placeholderTextColor="#64748B"
+              placeholder="Что получилось особенно хорошо? Чему научились?.."
+              placeholderTextColor={THEME.colors.textMuted}
               value={reflection}
               onChangeText={setReflection}
               onFocus={() => setIsFocused(true)}
@@ -83,27 +88,27 @@ export const ReflectionModal: React.FC<ReflectionModalProps> = ({
             />
           </View>
 
+          {/* Кнопки действий */}
           <View style={styles.buttonContainer}>
-            <MotionPressable onPress={handleSave}>
-              <LinearGradient
-                colors={Theme.colors.gradients.primary}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.saveButton}
-              >
-                <Text style={styles.saveButtonText}>Сохранить вывод</Text>
-                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-              </LinearGradient>
-            </MotionPressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.saveButton,
+                pressed && styles.buttonPressed,
+              ]}
+              onPress={handleSave}
+            >
+              <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+              <Text style={styles.saveButtonText}>Сохранить вывод</Text>
+            </Pressable>
 
             <Pressable
               style={({ pressed }) => [
                 styles.skipButton,
-                pressed && { opacity: 0.6 },
+                pressed && styles.buttonPressed,
               ]}
               onPress={onSkip}
             >
-              <Text style={styles.skipButtonText}>Пропустить без записи</Text>
+              <Text style={styles.skipButtonText}>Пропустить рефлексию</Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>
@@ -115,99 +120,108 @@ export const ReflectionModal: React.FC<ReflectionModalProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: THEME.colors.background,
   },
   container: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 12,
     justifyContent: 'space-between',
-    paddingBottom: 24,
+    paddingBottom: 28,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   dragIndicator: {
-    width: 38,
+    width: 40,
     height: 5,
     borderRadius: 3,
-    backgroundColor: '#334155',
-    marginBottom: 18,
+    backgroundColor: '#CBD5E1',
+    marginBottom: 16,
   },
-  iconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+  badgeTop: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
+    gap: 5,
+    backgroundColor: THEME.colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: THEME.radii.full,
+    marginBottom: 10,
+  },
+  badgeTopText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: THEME.colors.primary,
+    letterSpacing: 0.5,
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#F8FAFC',
+    fontWeight: '800',
+    color: THEME.colors.textPrimary,
     marginBottom: 8,
     textAlign: 'center',
-    letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: THEME.colors.textSecondary,
     textAlign: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     lineHeight: 20,
   },
-  inputContainer: {
+  inputCard: {
     flex: 1,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.lg,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.border,
     marginVertical: 14,
+    ...THEME.shadows.card,
+  },
+  inputCardFocused: {
+    borderColor: THEME.colors.primary,
+    ...THEME.shadows.glowIndigo,
   },
   input: {
     flex: 1,
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.lg,
-    padding: 18,
     fontSize: 16,
-    color: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#232E48',
-    minHeight: 140,
-    lineHeight: 24,
-  },
-  inputFocused: {
-    borderColor: '#6366F1',
-    backgroundColor: '#162038',
+    color: THEME.colors.textPrimary,
+    lineHeight: 22,
   },
   buttonContainer: {
     gap: 10,
-    marginTop: 8,
   },
   saveButton: {
+    backgroundColor: THEME.colors.primary,
     flexDirection: 'row',
-    paddingVertical: 16,
-    borderRadius: Theme.radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 15,
+    borderRadius: THEME.radii.md,
     gap: 8,
-    ...Theme.shadows.glowPrimary,
+    ...THEME.shadows.glowIndigo,
   },
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.2,
   },
   skipButton: {
+    backgroundColor: 'transparent',
     paddingVertical: 12,
+    borderRadius: THEME.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   skipButtonText: {
-    color: '#64748B',
+    color: THEME.colors.textMuted,
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  buttonPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.98 }],
   },
 });

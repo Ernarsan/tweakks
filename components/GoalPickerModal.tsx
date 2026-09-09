@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Goal } from '../lib/db';
-import { Theme } from '../lib/theme';
-import { MotionPressable } from './MotionPressable';
+import { THEME } from '../lib/theme';
 
 interface GoalPickerModalProps {
   visible: boolean;
@@ -40,7 +39,7 @@ export const GoalPickerModal: React.FC<GoalPickerModalProps> = ({
           <View style={styles.header}>
             <View style={styles.dragIndicator} />
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Выберите цель</Text>
+              <Text style={styles.title}>Привязка к цели</Text>
               <Pressable
                 onPress={onClose}
                 style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
@@ -70,10 +69,11 @@ export const GoalPickerModal: React.FC<GoalPickerModalProps> = ({
               const isSelected = isNone ? selectedGoalId === null : selectedGoalId === item.id;
 
               return (
-                <MotionPressable
-                  style={[
+                <Pressable
+                  style={({ pressed }) => [
                     styles.goalItem,
                     isSelected && styles.goalItemSelected,
+                    pressed && styles.itemPressed,
                   ]}
                   onPress={() => {
                     onSelectGoal(isNone ? null : item.id);
@@ -83,14 +83,21 @@ export const GoalPickerModal: React.FC<GoalPickerModalProps> = ({
                   <View style={styles.goalInfo}>
                     <View style={styles.titleRow}>
                       <Ionicons
-                        name={isNone ? 'file-tray-outline' : 'flag'}
-                        size={18}
-                        color={isSelected ? '#818CF8' : '#64748B'}
+                        name={isNone ? 'ellipse-outline' : 'flag'}
+                        size={16}
+                        color={isSelected ? THEME.colors.primary : THEME.colors.textMuted}
                       />
-                      <Text style={[styles.goalTitle, isSelected && styles.goalTitleSelected]}>
+                      <Text
+                        style={[
+                          styles.goalTitle,
+                          isNone && styles.noGoalTitle,
+                          isSelected && styles.goalTitleSelected,
+                        ]}
+                      >
                         {item.title}
                       </Text>
                     </View>
+
                     {!isNone && (
                       <Text style={styles.goalMeta}>
                         Прогресс: {item.current_value} / {item.target_value}
@@ -98,12 +105,15 @@ export const GoalPickerModal: React.FC<GoalPickerModalProps> = ({
                       </Text>
                     )}
                   </View>
+
                   {isSelected && (
-                    <View style={styles.checkBadge}>
-                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                    </View>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={22}
+                      color={THEME.colors.primary}
+                    />
                   )}
-                </MotionPressable>
+                </Pressable>
               );
             }}
           />
@@ -116,7 +126,7 @@ export const GoalPickerModal: React.FC<GoalPickerModalProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: THEME.colors.background,
   },
   container: {
     flex: 1,
@@ -126,15 +136,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: THEME.colors.border,
     alignItems: 'center',
   },
   dragIndicator: {
-    width: 38,
+    width: 40,
     height: 5,
     borderRadius: 3,
-    backgroundColor: '#334155',
-    marginBottom: 16,
+    backgroundColor: '#CBD5E1',
+    marginBottom: 14,
   },
   headerRow: {
     flexDirection: 'row',
@@ -145,7 +155,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: THEME.colors.textPrimary,
   },
   closeBtn: {
     paddingVertical: 4,
@@ -154,25 +164,29 @@ const styles = StyleSheet.create({
   closeText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#818CF8',
+    color: THEME.colors.primary,
   },
   listContent: {
     padding: 16,
-    gap: 10,
+    gap: 8,
   },
   goalItem: {
-    backgroundColor: '#131B2E',
+    backgroundColor: THEME.colors.card,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    borderRadius: Theme.radii.lg,
+    borderRadius: THEME.radii.md,
     borderWidth: 1,
-    borderColor: '#232E48',
+    borderColor: THEME.colors.border,
+    ...THEME.shadows.card,
   },
   goalItemSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    borderColor: THEME.colors.primary,
+    backgroundColor: THEME.colors.primaryLight,
+  },
+  itemPressed: {
+    opacity: 0.8,
   },
   goalInfo: {
     flex: 1,
@@ -181,29 +195,24 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   goalTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#E2E8F0',
+    color: THEME.colors.textPrimary,
   },
   goalTitleSelected: {
-    color: '#F8FAFC',
-    fontWeight: '700',
+    color: THEME.colors.primary,
+  },
+  noGoalTitle: {
+    color: THEME.colors.textSecondary,
+    fontWeight: '500',
   },
   goalMeta: {
     fontSize: 13,
-    color: '#94A3B8',
-    marginTop: 6,
-    marginLeft: 28,
-  },
-  checkBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#6366F1',
-    alignItems: 'center',
-    justifyContent: 'center',
+    color: THEME.colors.textMuted,
+    marginTop: 4,
+    marginLeft: 24,
   },
 });

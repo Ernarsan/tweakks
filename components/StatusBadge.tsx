@@ -1,41 +1,46 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { TaskStatus } from '../lib/db';
-import { Theme } from '../lib/theme';
+import { THEME } from '../lib/theme';
 
 interface StatusBadgeProps {
   status: TaskStatus;
   style?: ViewStyle;
+  showDot?: boolean;
 }
 
 const STATUS_CONFIG: Record<
   TaskStatus,
-  { label: string; bg: string; text: string; dot: string; border: string }
+  { label: string; bg: string; text: string; border: string; dot: string }
 > = {
   not_started: {
     label: 'Не начато',
-    bg: 'rgba(100, 116, 139, 0.12)',
-    text: '#94A3B8',
-    dot: '#64748B',
-    border: 'rgba(100, 116, 139, 0.25)',
+    bg: THEME.colors.notStartedLight,
+    text: THEME.colors.textSecondary,
+    border: THEME.colors.notStartedBorder,
+    dot: THEME.colors.notStarted,
   },
   in_progress: {
     label: 'В процессе',
-    bg: 'rgba(99, 102, 241, 0.14)',
-    text: '#A5B4FC',
-    dot: '#6366F1',
-    border: 'rgba(99, 102, 241, 0.35)',
+    bg: THEME.colors.inProgressLight,
+    text: THEME.colors.inProgress,
+    border: THEME.colors.inProgressBorder,
+    dot: THEME.colors.inProgress,
   },
   completed: {
     label: 'Выполнено',
-    bg: 'rgba(16, 185, 129, 0.14)',
-    text: '#6EE7B7',
-    dot: '#10B981',
-    border: 'rgba(16, 185, 129, 0.35)',
+    bg: THEME.colors.successLight,
+    text: THEME.colors.success,
+    border: THEME.colors.successBorder,
+    dot: THEME.colors.success,
   },
 };
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, style }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = ({
+  status,
+  style,
+  showDot = true,
+}) => {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.not_started;
 
   return (
@@ -49,7 +54,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, style }) => {
         style,
       ]}
     >
-      <View style={[styles.dot, { backgroundColor: config.dot }]} />
+      {showDot && <View style={[styles.dot, { backgroundColor: config.dot }]} />}
       <Text style={[styles.label, { color: config.text }]}>{config.label}</Text>
     </View>
   );
@@ -61,9 +66,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: Theme.radii.full,
+    borderRadius: THEME.radii.full,
     borderWidth: 1,
     gap: 6,
+    alignSelf: 'flex-start',
   },
   dot: {
     width: 6,

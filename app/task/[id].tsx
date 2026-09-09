@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import {
   getTaskById,
@@ -23,11 +22,10 @@ import {
   Task,
   Goal,
 } from '../../lib/db';
-import { Theme } from '../../lib/theme';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ReflectionModal } from '../../components/ReflectionModal';
 import { GoalPickerModal } from '../../components/GoalPickerModal';
-import { MotionPressable } from '../../components/MotionPressable';
+import { THEME } from '../../lib/theme';
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -44,7 +42,6 @@ export default function TaskDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Reflection modal
   const [reflectionModalVisible, setReflectionModalVisible] = useState(false);
   const [goalPickerVisible, setGoalPickerVisible] = useState(false);
 
@@ -76,7 +73,7 @@ export default function TaskDetailScreen() {
 
   const handleSaveDetails = async () => {
     if (!title.trim()) {
-      Alert.alert('Заголовок обязателен', 'Пожалуйста, введите название задачи.');
+      Alert.alert('Заголовок обязателен', 'Пожалуйста, укажите название задачи.');
       return;
     }
 
@@ -100,13 +97,13 @@ export default function TaskDetailScreen() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <MotionPressable
+        <Pressable
           onPress={handleSaveDetails}
           disabled={saving}
-          style={styles.headerSaveBtn}
+          style={({ pressed }) => [styles.headerSaveBtn, pressed && { opacity: 0.6 }]}
         >
           <Text style={styles.headerSaveText}>{saving ? '...' : 'Сохранить'}</Text>
-        </MotionPressable>
+        </Pressable>
       ),
     });
   }, [navigation, handleSaveDetails, saving]);
@@ -182,7 +179,7 @@ export default function TaskDetailScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#818CF8" />
+        <ActivityIndicator size="large" color={THEME.colors.primary} />
       </View>
     );
   }
@@ -209,101 +206,176 @@ export default function TaskDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Верхняя панель статуса */}
-        <View style={styles.statusSection}>
-          <Text style={styles.sectionLabel}>ТЕКУЩИЙ СТАТУС</Text>
-          <StatusBadge status={task.status} />
-        </View>
+        {/* Интерактивный статус-степпер */}
+        <View style={styles.stepperCard}>
+          <Text style={styles.sectionLabel}>Этап выполнения</Text>
+          <View style={styles.stepperRow}>
+            {/* Шаг 1 */}
+            <View style={styles.stepItem}>
+              <View
+                style={[
+                  styles.stepCircle,
+                  task.status === 'not_started' && styles.stepCircleActive,
+                  (task.status === 'in_progress' || task.status === 'completed') && styles.stepCircleCompleted,
+                ]}
+              >
+                <Ionicons
+                  name={task.status !== 'not_started' ? 'checkmark' : 'radio-button-on'}
+                  size={14}
+                  color="#FFFFFF"
+                />
+              </View>
+              <Text style={styles.stepLabel}>Создано</Text>
+            </View>
 
-        {/* Кнопки смены статуса */}
-        <View style={styles.actionBlock}>
-          {task.status === 'not_started' && (
-            <MotionPressable onPress={handleStart}>
-              <LinearGradient
-                colors={Theme.colors.gradients.primary}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.primaryActionButton}
+            <View
+              style={[
+                styles.stepLine,
+                task.status !== 'not_started' && styles.stepLineActive,
+              ]}
+            />
+
+            {/* Шаг 2 */}
+            <View style={styles.stepItem}>
+              <View
+                style={[
+                  styles.stepCircle,
+                  task.status === 'in_progress' && styles.stepCircleActive,
+                  task.status === 'completed' && styles.stepCircleCompleted,
+                ]}
+              >
+                <Ionicons
+                  name={task.status === 'completed' ? 'checkmark' : 'play'}
+                  size={12}
+                  color="#FFFFFF"
+                />
+              </View>
+              <Text style={styles.stepLabel}>В процессе</Text>
+            </View>
+
+            <View
+              style={[
+                styles.stepLine,
+                task.status === 'completed' && styles.stepLineActive,
+              ]}
+            />
+
+            {/* Шаг 3 */}
+            <View style={styles.stepItem}>
+              <View
+                style={[
+                  styles.stepCircle,
+                  task.status === 'completed' && styles.stepCircleCompleted,
+                ]}
+              >
+                <Ionicons name="trophy" size={12} color="#FFFFFF" />
+              </View>
+              <Text style={styles.stepLabel}>Выполнено</Text>
+            </View>
+          </View>
+
+          {/* Главная кнопка действия */}
+          <View style={styles.actionButtonArea}>
+            {task.status === 'not_started' && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionBtn,
+                  styles.actionBtnStart,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={handleStart}
               >
                 <Ionicons name="play" size={18} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Начать выполнение</Text>
-              </LinearGradient>
-            </MotionPressable>
-          )}
+                <Text style={styles.actionBtnText}>Начать выполнение</Text>
+              </Pressable>
+            )}
 
-          {task.status === 'in_progress' && (
-            <MotionPressable onPress={handleCompletePress}>
-              <LinearGradient
-                colors={Theme.colors.gradients.success}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.primaryActionButton}
+            {task.status === 'in_progress' && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionBtn,
+                  styles.actionBtnComplete,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={handleCompletePress}
               >
-                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Завершить задачу</Text>
-              </LinearGradient>
-            </MotionPressable>
-          )}
+                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>Завершить задачу</Text>
+              </Pressable>
+            )}
 
-          {task.status === 'completed' && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.reopenButton,
-                pressed && { opacity: 0.6 },
-              ]}
-              onPress={handleReopen}
-            >
-              <Ionicons name="refresh" size={16} color="#818CF8" />
-              <Text style={styles.reopenButtonText}>Вернуть в статус «В процессе»</Text>
-            </Pressable>
-          )}
+            {task.status === 'completed' && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.reopenBtn,
+                  pressed && { opacity: 0.7 },
+                ]}
+                onPress={handleReopen}
+              >
+                <Ionicons name="refresh" size={15} color={THEME.colors.textMuted} />
+                <Text style={styles.reopenBtnText}>Вернуть в работу</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
-        {/* Блок рефлексии */}
+        {/* Карточка рефлексии Aceternity Quote Style */}
         {task.status === 'completed' && task.reflection ? (
           <View style={styles.reflectionCard}>
             <View style={styles.reflectionHeader}>
-              <Ionicons name="chatbox-ellipses" size={18} color="#818CF8" />
-              <Text style={styles.reflectionTitle}>Рефлексия после завершения</Text>
+              <View style={styles.reflectionIconWrap}>
+                <Ionicons name="sparkles" size={16} color={THEME.colors.secondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.reflectionTitle}>Инсайты выполнения</Text>
+                {task.completed_at && (
+                  <Text style={styles.completedAtDate}>
+                    {new Date(task.completed_at).toLocaleDateString('ru-RU', {
+                      day: 'numeric',
+                      month: 'long',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                )}
+              </View>
             </View>
-            <Text style={styles.reflectionContent}>{task.reflection}</Text>
-            {task.completed_at && (
-              <Text style={styles.completedAtText}>
-                Завершено: {new Date(task.completed_at).toLocaleDateString('ru-RU', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </Text>
-            )}
+
+            <View style={styles.quoteBlock}>
+              <Ionicons
+                name="chatbubble-ellipses"
+                size={18}
+                color={THEME.colors.secondary}
+                style={styles.quoteIcon}
+              />
+              <Text style={styles.reflectionText}>{task.reflection}</Text>
+            </View>
           </View>
         ) : null}
 
-        {/* Редактируемые поля */}
+        {/* Поля формы */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>НАЗВАНИЕ ЗАДАЧИ</Text>
+          <Text style={styles.sectionLabel}>Название задачи</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
               value={title}
               onChangeText={setTitle}
               placeholder="Название задачи"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={THEME.colors.textMuted}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ОПИСАНИЕ</Text>
+          <Text style={styles.sectionLabel}>Описание</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={[styles.textInput, styles.textArea]}
               value={description}
               onChangeText={setDescription}
-              placeholder="Дополнительные детали..."
-              placeholderTextColor="#64748B"
+              placeholder="Детали и заметки..."
+              placeholderTextColor={THEME.colors.textMuted}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -312,16 +384,19 @@ export default function TaskDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ПРИВЯЗАННАЯ ЦЕЛЬ</Text>
-          <MotionPressable
-            style={styles.pickerButton}
+          <Text style={styles.sectionLabel}>Связанная цель</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.pickerButton,
+              pressed && styles.pickerButtonPressed,
+            ]}
             onPress={() => setGoalPickerVisible(true)}
           >
             <View style={styles.pickerContent}>
               <Ionicons
                 name={selectedGoal ? 'flag' : 'flag-outline'}
                 size={18}
-                color={selectedGoal ? '#818CF8' : '#64748B'}
+                color={selectedGoal ? THEME.colors.primary : THEME.colors.textMuted}
               />
               <Text
                 style={[
@@ -333,8 +408,8 @@ export default function TaskDetailScreen() {
                 {selectedGoal ? selectedGoal.title : 'Без цели'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#64748B" />
-          </MotionPressable>
+            <Ionicons name="chevron-forward" size={16} color={THEME.colors.textMuted} />
+          </Pressable>
         </View>
 
         {/* Кнопка удаления */}
@@ -345,12 +420,11 @@ export default function TaskDetailScreen() {
           ]}
           onPress={handleDelete}
         >
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          <Ionicons name="trash-outline" size={18} color={THEME.colors.destructive} />
           <Text style={styles.deleteButtonText}>Удалить задачу</Text>
         </Pressable>
       </ScrollView>
 
-      {/* Модальное окно рефлексии */}
       <ReflectionModal
         visible={reflectionModalVisible}
         initialValue={task.reflection}
@@ -358,7 +432,6 @@ export default function TaskDetailScreen() {
         onSkip={handleSkipReflection}
       />
 
-      {/* Модалка выбора цели */}
       <GoalPickerModal
         visible={goalPickerVisible}
         goals={goals}
@@ -373,10 +446,10 @@ export default function TaskDetailScreen() {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: THEME.colors.background,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
   center: {
@@ -384,23 +457,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#0B0F19',
+    backgroundColor: THEME.colors.background,
   },
   notFoundText: {
     fontSize: 17,
-    color: '#94A3B8',
+    color: THEME.colors.textSecondary,
     marginBottom: 16,
   },
   backBtn: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.md,
-    borderWidth: 1,
-    borderColor: '#232E48',
+    backgroundColor: THEME.colors.primary,
+    borderRadius: THEME.radii.sm,
   },
   backBtnText: {
-    color: '#818CF8',
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   headerSaveBtn: {
@@ -410,140 +481,213 @@ const styles = StyleSheet.create({
   headerSaveText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#818CF8',
+    color: THEME.colors.primary,
   },
-  statusSection: {
+  stepperCard: {
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.lg,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    marginBottom: 16,
+    ...THEME.shadows.card,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  stepperRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#131B2E',
-    padding: 16,
-    borderRadius: Theme.radii.lg,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#232E48',
+    paddingHorizontal: 8,
+    marginBottom: 18,
   },
-  actionBlock: {
-    marginBottom: 16,
+  stepItem: {
+    alignItems: 'center',
+    gap: 6,
   },
-  primaryActionButton: {
+  stepCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepCircleActive: {
+    backgroundColor: THEME.colors.primary,
+    ...THEME.shadows.glowIndigo,
+  },
+  stepCircleCompleted: {
+    backgroundColor: THEME.colors.success,
+    ...THEME.shadows.glowEmerald,
+  },
+  stepLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#E2E8F0',
+    marginHorizontal: 8,
+    marginBottom: 18,
+  },
+  stepLineActive: {
+    backgroundColor: THEME.colors.primary,
+  },
+  stepLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: THEME.colors.textSecondary,
+  },
+  actionButtonArea: {
+    marginTop: 4,
+  },
+  actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: Theme.radii.lg,
+    paddingVertical: 14,
+    borderRadius: THEME.radii.md,
     gap: 8,
-    ...Theme.shadows.glowPrimary,
   },
-  actionButtonText: {
+  actionBtnStart: {
+    backgroundColor: THEME.colors.primary,
+    ...THEME.shadows.glowIndigo,
+  },
+  actionBtnComplete: {
+    backgroundColor: THEME.colors.success,
+    ...THEME.shadows.glowEmerald,
+  },
+  actionBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
-  reopenButton: {
+  reopenBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 6,
   },
-  reopenButtonText: {
-    color: '#818CF8',
-    fontSize: 14,
+  reopenBtnText: {
+    fontSize: 13,
     fontWeight: '600',
+    color: THEME.colors.textMuted,
+  },
+  buttonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
   reflectionCard: {
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: '#FAF5FF',
+    borderRadius: THEME.radii.lg,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.25)',
-    borderRadius: Theme.radii.lg,
-    padding: 18,
-    marginBottom: 20,
+    borderColor: '#E9D5FF',
+    marginBottom: 16,
   },
   reflectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: 10,
+    marginBottom: 12,
+  },
+  reflectionIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   reflectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#818CF8',
-    letterSpacing: 0.2,
-  },
-  reflectionContent: {
     fontSize: 15,
-    color: '#F8FAFC',
-    lineHeight: 22,
+    fontWeight: '700',
+    color: THEME.colors.secondary,
   },
-  completedAtText: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 10,
+  completedAtDate: {
+    fontSize: 11,
+    color: THEME.colors.textMuted,
+    marginTop: 1,
+  },
+  quoteBlock: {
+    position: 'relative',
+    paddingLeft: 22,
+  },
+  quoteIcon: {
+    position: 'absolute',
+    left: 0,
+    top: -2,
+    opacity: 0.5,
+  },
+  reflectionText: {
+    fontSize: 15,
+    color: THEME.colors.textPrimary,
+    lineHeight: 22,
+    fontStyle: 'italic',
   },
   section: {
-    marginBottom: 18,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#818CF8',
-    letterSpacing: 0.8,
-    marginBottom: 8,
-    marginLeft: 4,
+    marginBottom: 16,
   },
   inputCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.lg,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.md,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#232E48',
+    borderColor: THEME.colors.border,
+    ...THEME.shadows.card,
   },
   textInput: {
     fontSize: 16,
-    color: '#F8FAFC',
+    color: THEME.colors.textPrimary,
   },
   textArea: {
     minHeight: 80,
   },
   pickerButton: {
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.lg,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.md,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#232E48',
+    borderColor: THEME.colors.border,
+    ...THEME.shadows.card,
+  },
+  pickerButtonPressed: {
+    backgroundColor: THEME.colors.backgroundSubtle,
   },
   pickerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     flex: 1,
   },
   pickerText: {
     fontSize: 16,
-    color: '#F8FAFC',
-    fontWeight: '600',
+    color: THEME.colors.textPrimary,
+    fontWeight: '500',
   },
   pickerPlaceholder: {
-    color: '#64748B',
-    fontWeight: '400',
+    color: THEME.colors.textMuted,
   },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    marginTop: 10,
+    paddingVertical: 14,
+    marginTop: 12,
     gap: 6,
   },
   deleteButtonText: {
-    color: '#EF4444',
+    color: THEME.colors.destructive,
     fontSize: 15,
     fontWeight: '600',
   },

@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Theme } from '../lib/theme';
+import { THEME } from '../lib/theme';
 
 interface SwipeableRowProps {
   children: React.ReactNode;
@@ -29,7 +29,6 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   confirmMessage = 'Это действие нельзя отменить.',
 }) => {
   const translateX = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(1)).current;
   const isOpenRef = useRef(false);
 
   const confirmDelete = () => {
@@ -48,8 +47,9 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     isOpenRef.current = false;
     Animated.spring(translateX, {
       toValue: 0,
+      stiffness: 350,
+      damping: 24,
       useNativeDriver: true,
-      bounciness: 4,
     }).start();
   };
 
@@ -57,8 +57,9 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     isOpenRef.current = true;
     Animated.spring(translateX, {
       toValue: -BUTTON_WIDTH,
+      stiffness: 350,
+      damping: 24,
       useNativeDriver: true,
-      bounciness: 4,
     }).start();
   };
 
@@ -73,7 +74,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
           newX -= BUTTON_WIDTH;
         }
         if (newX > 0) {
-          newX = newX * 0.2;
+          newX = newX * 0.2; // сопротивление вправо
         } else if (newX < -BUTTON_WIDTH * 1.5) {
           newX = -BUTTON_WIDTH * 1.5 + (newX + BUTTON_WIDTH * 1.5) * 0.2;
         }
@@ -94,32 +95,13 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     })
   ).current;
 
-  const handlePressIn = () => {
-    Animated.spring(scale, {
-      toValue: 0.98,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scale, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 40,
-      bounciness: 8,
-    }).start();
-  };
-
   return (
     <View style={styles.container}>
-      {/* Кнопка удаления сзади */}
       <View style={styles.actionContainer}>
         <Pressable
           style={({ pressed }) => [
             styles.deleteButton,
-            pressed && { opacity: 0.8 },
+            pressed && { opacity: 0.85 },
           ]}
           onPress={confirmDelete}
         >
@@ -128,18 +110,15 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         </Pressable>
       </View>
 
-      {/* Карточка */}
       <Animated.View
         style={[
           styles.content,
-          { transform: [{ translateX }, { scale }] },
+          { transform: [{ translateX }] },
         ]}
         {...panResponder.panHandlers}
       >
         <Pressable
           style={styles.pressable}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
           onPress={() => {
             if (isOpenRef.current) {
               closeRow();
@@ -159,7 +138,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     overflow: 'hidden',
-    borderRadius: Theme.radii.lg,
+    borderRadius: THEME.radii.lg,
     marginBottom: 12,
   },
   actionContainer: {
@@ -170,9 +149,9 @@ const styles = StyleSheet.create({
     width: BUTTON_WIDTH,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#DC2626',
-    borderTopRightRadius: Theme.radii.lg,
-    borderBottomRightRadius: Theme.radii.lg,
+    backgroundColor: THEME.colors.destructive,
+    borderTopRightRadius: THEME.radii.lg,
+    borderBottomRightRadius: THEME.radii.lg,
   },
   deleteButton: {
     flex: 1,
@@ -182,18 +161,15 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     marginTop: 3,
   },
   content: {
-    backgroundColor: Theme.colors.card,
-    borderRadius: Theme.radii.lg,
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-    ...Theme.shadows.card,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.lg,
   },
   pressable: {
-    borderRadius: Theme.radii.lg,
+    borderRadius: THEME.radii.lg,
   },
 });

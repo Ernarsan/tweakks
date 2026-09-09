@@ -4,18 +4,17 @@ import {
   Text,
   TextInput,
   StyleSheet,
+  Pressable,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { createTask, getGoals, Goal } from '../../lib/db';
-import { Theme } from '../../lib/theme';
 import { GoalPickerModal } from '../../components/GoalPickerModal';
-import { MotionPressable } from '../../components/MotionPressable';
+import { THEME } from '../../lib/theme';
 
 export default function NewTaskScreen() {
   const router = useRouter();
@@ -66,12 +65,12 @@ export default function NewTaskScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>НАЗВАНИЕ ЗАДАЧИ *</Text>
+          <Text style={styles.sectionTitle}>Название задачи *</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
-              placeholder="Например, Записаться к стоматологу"
-              placeholderTextColor="#64748B"
+              placeholder="Например, Подготовить отчет по спринту"
+              placeholderTextColor={THEME.colors.textMuted}
               value={title}
               onChangeText={setTitle}
               returnKeyType="next"
@@ -81,12 +80,12 @@ export default function NewTaskScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ОПИСАНИЕ</Text>
+          <Text style={styles.sectionTitle}>Описание</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={[styles.textInput, styles.textArea]}
-              placeholder="Дополнительные детали, ссылки или заметки..."
-              placeholderTextColor="#64748B"
+              placeholder="Дополнительные детали, ссылки или критерии готовности..."
+              placeholderTextColor={THEME.colors.textMuted}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -97,16 +96,19 @@ export default function NewTaskScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ПРИВЯЗКА К ЦЕЛИ</Text>
-          <MotionPressable
-            style={styles.pickerButton}
+          <Text style={styles.sectionTitle}>Привязка к цели</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.pickerButton,
+              pressed && styles.pickerButtonPressed,
+            ]}
             onPress={() => setGoalPickerVisible(true)}
           >
             <View style={styles.pickerContent}>
               <Ionicons
                 name={selectedGoal ? 'flag' : 'flag-outline'}
                 size={18}
-                color={selectedGoal ? '#818CF8' : '#64748B'}
+                color={selectedGoal ? THEME.colors.primary : THEME.colors.textMuted}
               />
               <Text
                 style={[
@@ -118,27 +120,24 @@ export default function NewTaskScreen() {
                 {selectedGoal ? selectedGoal.title : 'Без цели'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#64748B" />
-          </MotionPressable>
+            <Ionicons name="chevron-forward" size={16} color={THEME.colors.textMuted} />
+          </Pressable>
         </View>
 
-        <MotionPressable
+        <Pressable
+          style={({ pressed }) => [
+            styles.submitButton,
+            saving && styles.submitButtonDisabled,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
           onPress={handleSave}
           disabled={saving}
-          style={styles.submitContainer}
         >
-          <LinearGradient
-            colors={Theme.colors.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.submitButton}
-          >
-            <Text style={styles.submitButtonText}>
-              {saving ? 'Сохранение...' : 'Создать задачу'}
-            </Text>
-            <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-          </LinearGradient>
-        </MotionPressable>
+          <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+          <Text style={styles.submitButtonText}>
+            {saving ? 'Сохранение...' : 'Создать задачу'}
+          </Text>
+        </Pressable>
       </ScrollView>
 
       <GoalPickerModal
@@ -155,79 +154,86 @@ export default function NewTaskScreen() {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: THEME.colors.background,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#818CF8',
-    letterSpacing: 0.8,
+    color: THEME.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 8,
     marginLeft: 4,
   },
   inputCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.lg,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.md,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#232E48',
+    borderColor: THEME.colors.border,
+    ...THEME.shadows.card,
   },
   textInput: {
     fontSize: 16,
-    color: '#F8FAFC',
+    color: THEME.colors.textPrimary,
   },
   textArea: {
     minHeight: 90,
   },
   pickerButton: {
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.lg,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.md,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#232E48',
+    borderColor: THEME.colors.border,
+    ...THEME.shadows.card,
+  },
+  pickerButtonPressed: {
+    backgroundColor: THEME.colors.backgroundSubtle,
   },
   pickerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     flex: 1,
   },
   pickerText: {
     fontSize: 16,
-    color: '#F8FAFC',
-    fontWeight: '600',
+    color: THEME.colors.textPrimary,
+    fontWeight: '500',
   },
   pickerPlaceholder: {
-    color: '#64748B',
-    fontWeight: '400',
-  },
-  submitContainer: {
-    marginTop: 12,
+    color: THEME.colors.textMuted,
   },
   submitButton: {
+    backgroundColor: THEME.colors.primary,
     flexDirection: 'row',
-    paddingVertical: 16,
-    borderRadius: Theme.radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 15,
+    borderRadius: THEME.radii.md,
     gap: 8,
-    ...Theme.shadows.glowPrimary,
+    marginTop: 12,
+    ...THEME.shadows.glowIndigo,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
   },
 });

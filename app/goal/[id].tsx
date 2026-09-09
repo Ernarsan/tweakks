@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   StyleSheet,
+  Pressable,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
@@ -14,7 +15,6 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   getGoalById,
   updateGoal,
@@ -26,8 +26,7 @@ import {
 } from '../../lib/db';
 import { ProgressBar } from '../../components/ProgressBar';
 import { StatusBadge } from '../../components/StatusBadge';
-import { Theme } from '../../lib/theme';
-import { MotionPressable } from '../../components/MotionPressable';
+import { THEME } from '../../lib/theme';
 
 export default function GoalDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -45,7 +44,6 @@ export default function GoalDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Progress add modal
   const [progressModalVisible, setProgressModalVisible] = useState(false);
   const [progressDelta, setProgressDelta] = useState('');
 
@@ -109,33 +107,37 @@ export default function GoalDetailScreen() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <MotionPressable
+        <Pressable
           onPress={handleSaveDetails}
           disabled={saving}
-          style={styles.headerSaveBtn}
+          style={({ pressed }) => [styles.headerSaveBtn, pressed && { opacity: 0.6 }]}
         >
           <Text style={styles.headerSaveText}>{saving ? '...' : 'Сохранить'}</Text>
-        </MotionPressable>
+        </Pressable>
       ),
     });
   }, [navigation, handleSaveDetails, saving]);
 
-  const handleAddProgress = async () => {
-    const delta = parseFloat(progressDelta.replace(',', '.'));
-    if (isNaN(delta) || delta <= 0) {
-      Alert.alert('Некорректная сумма', 'Введите положительное число для добавления прогресса.');
-      return;
-    }
-
+  const applyProgressDelta = async (delta: number) => {
     try {
       await addGoalProgress(goalId, delta);
-      setProgressModalVisible(false);
-      setProgressDelta('');
       await loadData();
     } catch (err) {
       console.error('Ошибка добавления прогресса:', err);
       Alert.alert('Ошибка', 'Не удалось обновить прогресс');
     }
+  };
+
+  const handleCustomProgressSubmit = async () => {
+    const delta = parseFloat(progressDelta.replace(',', '.'));
+    if (isNaN(delta) || delta <= 0) {
+      Alert.alert('Некорректная сумма', 'Введите положительное число.');
+      return;
+    }
+
+    await applyProgressDelta(delta);
+    setProgressModalVisible(false);
+    setProgressDelta('');
   };
 
   const handleDelete = () => {
@@ -164,7 +166,7 @@ export default function GoalDetailScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#818CF8" />
+        <ActivityIndicator size="large" color={THEME.colors.primary} />
       </View>
     );
   }
@@ -173,9 +175,9 @@ export default function GoalDetailScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.notFoundText}>Цель не найдена</Text>
-        <MotionPressable style={styles.backBtn} onPress={() => router.back()}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>Вернуться назад</Text>
-        </MotionPressable>
+        </Pressable>
       </View>
     );
   }
@@ -184,7 +186,9 @@ export default function GoalDetailScreen() {
     Math.round((goal.current_value / (goal.target_value || 1)) * 100),
     100
   );
+  const isCompleted = goal.current_value >= goal.target_value && goal.target_value > 0;
   const unitStr = goal.unit ? ` ${goal.unit}` : '';
+  const remaining = Math.max(0, goal.target_value - goal.current_value);
 
   return (
     <KeyboardAvoidingView
@@ -195,12 +199,31 @@ export default function GoalDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Карточка текущего прогресса (Bento style) */}
-        <View style={styles.progressCard}>
-          <View style={styles.progressCardHeader}>
-            <Text style={styles.progressCardTitle}>ТЕКУЩИЙ ПРОГРЕСС</Text>
-            <View style={styles.percentBadge}>
-              <Text style={styles.percentBadgeText}>{percent}%</Text>
+        {/* Bento Hero Card Прогресса */}
+        <View style={[styles.heroCard, isCompleted && styles.heroCardCompleted]}>
+          <View style={styles.heroTopRow}>
+            <View>
+              <Text style={styles.heroPreTitle}>ТЕКУЩИЙ ПРОГРЕСС</Text>
+              <Text style={styles.heroValueMain}>
+                {goal.current_value}
+                <Text style={styles.heroTargetSub}> / {goal.target_value}{unitStr}</Text>
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.heroPercentPill,
+                isCompleted && styles.heroPercentPillCompleted,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.heroPercentText,
+                  isCompleted && styles.heroPercentTextCompleted,
+                ]}
+              >
+                {percent}%
+              </Text>
             </View>
           </View>
 
@@ -211,46 +234,58 @@ export default function GoalDetailScreen() {
             style={styles.progressBar}
           />
 
-          <View style={styles.progressValues}>
-            <Text style={styles.currentValueText}>
-              {goal.current_value}
-              <Text style={styles.subText}> / {goal.target_value}{unitStr}</Text>
+          <View style={styles.remainingRow}>
+            <Text style={styles.remainingText}>
+              {isCompleted ? '🎉 Цель успешно достигнута!' : `Осталось набрать: ${remaining}${unitStr}`}
             </Text>
           </View>
 
-          {/* Кнопка «+ добавить прогресс» */}
-          <MotionPressable
+          {/* Быстрые чипы добавления прогресса в стиле Aceternity */}
+          <Text style={styles.quickAddLabel}>Быстро добавить прогресс:</Text>
+          <View style={styles.chipsRow}>
+            {[100, 500, 1000, 5000].map((val) => (
+              <Pressable
+                key={val}
+                style={({ pressed }) => [
+                  styles.chipBtn,
+                  pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
+                ]}
+                onPress={() => applyProgressDelta(val)}
+              >
+                <Text style={styles.chipBtnText}>+{val}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Кнопка произвольного ввода */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.addProgressBtn,
+              pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+            ]}
             onPress={() => setProgressModalVisible(true)}
-            style={styles.addProgressBtnContainer}
           >
-            <LinearGradient
-              colors={Theme.colors.gradients.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.addProgressBtn}
-            >
-              <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-              <Text style={styles.addProgressBtnText}>+ добавить прогресс</Text>
-            </LinearGradient>
-          </MotionPressable>
+            <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+            <Text style={styles.addProgressBtnText}>+ ввести другую сумму</Text>
+          </Pressable>
         </View>
 
-        {/* Редактируемые поля */}
+        {/* Редактируемые поля цели */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>НАЗВАНИЕ ЦЕЛИ</Text>
+          <Text style={styles.sectionLabel}>Название цели</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
               value={title}
               onChangeText={setTitle}
               placeholder="Название цели"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={THEME.colors.textMuted}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ЦЕЛЕВОЕ ЗНАЧЕНИЕ</Text>
+          <Text style={styles.sectionLabel}>Целевое значение</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
@@ -258,33 +293,33 @@ export default function GoalDetailScreen() {
               onChangeText={setTargetValue}
               keyboardType="decimal-pad"
               placeholder="Целевое значение"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={THEME.colors.textMuted}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ЕДИНИЦА ИЗМЕРЕНИЯ</Text>
+          <Text style={styles.sectionLabel}>Единица измерения</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
               value={unit}
               onChangeText={setUnit}
-              placeholder="₽, км, книг и т.д."
-              placeholderTextColor="#64748B"
+              placeholder="₽, км, книг, задач и т.д."
+              placeholderTextColor={THEME.colors.textMuted}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>СРОК / ДЕДЛАЙН</Text>
+          <Text style={styles.sectionLabel}>Срок / дедлайн</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
               value={deadline}
               onChangeText={setDeadline}
               placeholder="Например, 31.12.2025"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={THEME.colors.textMuted}
             />
           </View>
         </View>
@@ -292,18 +327,22 @@ export default function GoalDetailScreen() {
         {/* Список связанных задач */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>
-            СВЯЗАННЫЕ ЗАДАЧИ ({tasks.length})
+            Привязанные задачи ({tasks.length})
           </Text>
           {tasks.length === 0 ? (
             <View style={styles.emptyTasksBox}>
-              <Ionicons name="documents-outline" size={24} color="#64748B" style={{ marginBottom: 6 }} />
-              <Text style={styles.emptyTasksText}>К этой цели пока не привязано задач</Text>
+              <Text style={styles.emptyTasksText}>
+                К этой цели пока не привязано ни одной задачи
+              </Text>
             </View>
           ) : (
             tasks.map((t) => (
-              <MotionPressable
+              <Pressable
                 key={t.id}
-                style={styles.taskItem}
+                style={({ pressed }) => [
+                  styles.taskItem,
+                  pressed && { opacity: 0.8 },
+                ]}
                 onPress={() => router.push(`/task/${t.id}`)}
               >
                 <View style={styles.taskItemContent}>
@@ -312,23 +351,26 @@ export default function GoalDetailScreen() {
                   </Text>
                   <StatusBadge status={t.status} />
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#64748B" />
-              </MotionPressable>
+                <Ionicons name="chevron-forward" size={16} color={THEME.colors.textMuted} />
+              </Pressable>
             ))
           )}
         </View>
 
         {/* Кнопка удаления */}
-        <MotionPressable
-          style={styles.deleteButton}
+        <Pressable
+          style={({ pressed }) => [
+            styles.deleteButton,
+            pressed && { opacity: 0.7 },
+          ]}
           onPress={handleDelete}
         >
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          <Ionicons name="trash-outline" size={18} color={THEME.colors.destructive} />
           <Text style={styles.deleteButtonText}>Удалить цель</Text>
-        </MotionPressable>
+        </Pressable>
       </ScrollView>
 
-      {/* Модалка добавления прогресса (Aceternity dark luxury modal) */}
+      {/* Модалка произвольного ввода прогресса */}
       <Modal
         visible={progressModalVisible}
         animationType="slide"
@@ -340,14 +382,14 @@ export default function GoalDetailScreen() {
             <View style={styles.dragIndicator} />
             <Text style={styles.modalTitle}>Добавить прогресс</Text>
             <Text style={styles.modalSubtitle}>
-              Введите значение, на которое увеличился результат:
+              Введите значение, на которое увеличился текущий результат цели:
             </Text>
 
             <View style={styles.deltaInputCard}>
               <TextInput
                 style={styles.deltaInput}
                 placeholder="0"
-                placeholderTextColor="#64748B"
+                placeholderTextColor={THEME.colors.textMuted}
                 keyboardType="decimal-pad"
                 value={progressDelta}
                 onChangeText={setProgressDelta}
@@ -356,39 +398,19 @@ export default function GoalDetailScreen() {
               {unit ? <Text style={styles.deltaUnit}>{unit}</Text> : null}
             </View>
 
-            {/* Быстрые кнопки */}
-            <View style={styles.quickChipsRow}>
-              {[100, 500, 1000, 5000].map((val) => (
-                <MotionPressable
-                  key={val}
-                  style={styles.quickChip}
-                  onPress={() => setProgressDelta(val.toString())}
-                >
-                  <Text style={styles.quickChipText}>+{val}</Text>
-                </MotionPressable>
-              ))}
-            </View>
-
             <View style={styles.modalBtnRow}>
-              <MotionPressable
-                onPress={handleAddProgress}
-                style={styles.modalPrimaryBtnContainer}
+              <Pressable
+                style={[styles.modalBtn, styles.modalBtnPrimary]}
+                onPress={handleCustomProgressSubmit}
               >
-                <LinearGradient
-                  colors={Theme.colors.gradients.primary}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.modalBtnPrimary}
-                >
-                  <Text style={styles.modalBtnPrimaryText}>Добавить</Text>
-                </LinearGradient>
-              </MotionPressable>
-              <MotionPressable
-                style={styles.modalBtnCancel}
+                <Text style={styles.modalBtnPrimaryText}>Применить</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalBtn, styles.modalBtnCancel]}
                 onPress={() => setProgressModalVisible(false)}
               >
                 <Text style={styles.modalBtnCancelText}>Отмена</Text>
-              </MotionPressable>
+              </Pressable>
             </View>
           </View>
         </SafeAreaView>
@@ -400,10 +422,10 @@ export default function GoalDetailScreen() {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: THEME.colors.background,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
   center: {
@@ -411,23 +433,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#0B0F19',
+    backgroundColor: THEME.colors.background,
   },
   notFoundText: {
     fontSize: 17,
-    color: '#94A3B8',
+    color: THEME.colors.textSecondary,
     marginBottom: 16,
   },
   backBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#1E293B',
-    borderRadius: Theme.radii.md,
-    borderWidth: 1,
-    borderColor: '#334155',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: THEME.colors.primary,
+    borderRadius: THEME.radii.sm,
   },
   backBtnText: {
-    color: '#818CF8',
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   headerSaveBtn: {
@@ -437,70 +457,108 @@ const styles = StyleSheet.create({
   headerSaveText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#818CF8',
+    color: THEME.colors.primary,
   },
-  progressCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.xl,
+  heroCard: {
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.lg,
     padding: 20,
-    marginBottom: 24,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#232E48',
-    ...Theme.shadows.card,
+    borderColor: THEME.colors.border,
+    ...THEME.shadows.card,
   },
-  progressCardHeader: {
+  heroCardCompleted: {
+    borderColor: THEME.colors.successBorder,
+  },
+  heroTopRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 16,
   },
-  progressCardTitle: {
+  heroPreTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#818CF8',
-    letterSpacing: 0.8,
+    color: THEME.colors.textMuted,
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
-  percentBadge: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Theme.radii.full,
-    borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
-  },
-  percentBadgeText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#818CF8',
-  },
-  progressBar: {
-    marginBottom: 14,
-  },
-  progressValues: {
-    marginBottom: 18,
-  },
-  currentValueText: {
+  heroValueMain: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: THEME.colors.textPrimary,
   },
-  subText: {
-    fontSize: 17,
+  heroTargetSub: {
+    fontSize: 16,
     fontWeight: '500',
-    color: '#64748B',
+    color: THEME.colors.textSecondary,
   },
-  addProgressBtnContainer: {
-    borderRadius: Theme.radii.lg,
-    overflow: 'hidden',
+  heroPercentPill: {
+    backgroundColor: THEME.colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: THEME.radii.full,
+  },
+  heroPercentPillCompleted: {
+    backgroundColor: THEME.colors.successLight,
+  },
+  heroPercentText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: THEME.colors.primary,
+  },
+  heroPercentTextCompleted: {
+    color: THEME.colors.success,
+  },
+  progressBar: {
+    marginBottom: 12,
+  },
+  remainingRow: {
+    marginBottom: 16,
+  },
+  remainingText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: THEME.colors.textSecondary,
+  },
+  quickAddLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 8,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  chipBtn: {
+    flex: 1,
+    backgroundColor: THEME.colors.primaryLight,
+    paddingVertical: 10,
+    borderRadius: THEME.radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: THEME.colors.borderActive,
+  },
+  chipBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.colors.primary,
   },
   addProgressBtn: {
+    backgroundColor: THEME.colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    borderRadius: Theme.radii.lg,
+    borderRadius: THEME.radii.md,
     gap: 8,
-    ...Theme.shadows.glowPrimary,
+    ...THEME.shadows.glowIndigo,
   },
   addProgressBtnText: {
     color: '#FFFFFF',
@@ -508,50 +566,53 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#818CF8',
-    letterSpacing: 0.8,
+    color: THEME.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 8,
     marginLeft: 4,
   },
   inputCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.lg,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.md,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#232E48',
+    borderColor: THEME.colors.border,
+    ...THEME.shadows.card,
   },
   textInput: {
     fontSize: 16,
-    color: '#F8FAFC',
+    color: THEME.colors.textPrimary,
   },
   emptyTasksBox: {
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.lg,
-    padding: 24,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.md,
+    padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#232E48',
+    borderColor: THEME.colors.border,
   },
   emptyTasksText: {
     fontSize: 14,
-    color: '#64748B',
+    color: THEME.colors.textMuted,
   },
   taskItem: {
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.lg,
-    padding: 16,
-    marginBottom: 10,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.md,
+    padding: 14,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#232E48',
+    borderColor: THEME.colors.border,
+    ...THEME.shadows.card,
   },
   taskItemContent: {
     flex: 1,
@@ -563,7 +624,7 @@ const styles = StyleSheet.create({
   taskItemTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#F8FAFC',
+    color: THEME.colors.textPrimary,
     flex: 1,
     marginRight: 12,
   },
@@ -571,23 +632,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: Theme.radii.lg,
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.25)',
-    marginTop: 10,
-    marginBottom: 30,
-    gap: 8,
+    paddingVertical: 14,
+    marginTop: 12,
+    gap: 6,
   },
   deleteButtonText: {
-    color: '#EF4444',
+    color: THEME.colors.destructive,
     fontSize: 15,
     fontWeight: '600',
   },
   safeAreaModal: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: THEME.colors.background,
   },
   modalContent: {
     flex: 1,
@@ -595,96 +651,75 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dragIndicator: {
-    width: 36,
+    width: 40,
     height: 5,
     borderRadius: 3,
-    backgroundColor: '#334155',
-    marginBottom: 24,
+    backgroundColor: '#CBD5E1',
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#F8FAFC',
-    marginBottom: 8,
+    color: THEME.colors.textPrimary,
+    marginBottom: 6,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
-    marginBottom: 24,
+    color: THEME.colors.textSecondary,
+    marginBottom: 20,
     textAlign: 'center',
   },
   deltaInputCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.xl,
-    paddingHorizontal: 24,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.lg,
+    paddingHorizontal: 20,
     paddingVertical: 16,
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#6366F1',
-    ...Theme.shadows.glowPrimary,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.primary,
+    ...THEME.shadows.glowIndigo,
   },
   deltaInput: {
     fontSize: 34,
     fontWeight: '800',
-    color: '#818CF8',
+    color: THEME.colors.primary,
     textAlign: 'center',
   },
   deltaUnit: {
     fontSize: 20,
-    color: '#64748B',
-    fontWeight: '700',
+    color: THEME.colors.textMuted,
+    fontWeight: '600',
     marginLeft: 8,
-  },
-  quickChipsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 28,
-  },
-  quickChip: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: Theme.radii.full,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  quickChipText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#818CF8',
   },
   modalBtnRow: {
     width: '100%',
-    gap: 12,
+    gap: 10,
   },
-  modalPrimaryBtnContainer: {
-    borderRadius: Theme.radii.lg,
-    overflow: 'hidden',
+  modalBtn: {
+    paddingVertical: 14,
+    borderRadius: THEME.radii.md,
+    alignItems: 'center',
     width: '100%',
   },
   modalBtnPrimary: {
-    paddingVertical: 16,
-    borderRadius: Theme.radii.lg,
-    alignItems: 'center',
-    width: '100%',
+    backgroundColor: THEME.colors.primary,
+    ...THEME.shadows.glowIndigo,
   },
   modalBtnPrimaryText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
   },
   modalBtnCancel: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    width: '100%',
+    backgroundColor: 'transparent',
   },
   modalBtnCancelText: {
-    color: '#64748B',
-    fontSize: 16,
+    color: THEME.colors.textMuted,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

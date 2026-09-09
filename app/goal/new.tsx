@@ -4,19 +4,16 @@ import {
   Text,
   TextInput,
   StyleSheet,
+  Pressable,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { createGoal } from '../../lib/db';
-import { Theme } from '../../lib/theme';
-import { MotionPressable } from '../../components/MotionPressable';
-
-const UNIT_PRESETS = ['₽', '$', 'км', 'книг', 'часов', '%'];
+import { THEME } from '../../lib/theme';
 
 export default function NewGoalScreen() {
   const router = useRouter();
@@ -28,7 +25,7 @@ export default function NewGoalScreen() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('Заголовок обязателен', 'Пожалуйста, введите название цели.');
+      Alert.alert('Заголовок обязателен', 'Пожалуйста, укажите название цели.');
       return;
     }
 
@@ -67,12 +64,12 @@ export default function NewGoalScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>НАЗВАНИЕ ЦЕЛИ *</Text>
+          <Text style={styles.sectionTitle}>Название цели *</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
-              placeholder="Например, Накопить 100 000"
-              placeholderTextColor="#64748B"
+              placeholder="Например, Заработать 100 000"
+              placeholderTextColor={THEME.colors.textMuted}
               value={title}
               onChangeText={setTitle}
               autoFocus
@@ -81,12 +78,12 @@ export default function NewGoalScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ЦЕЛЕВОЕ ЗНАЧЕНИЕ *</Text>
+          <Text style={styles.sectionTitle}>Целевое значение *</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
               placeholder="Например, 100000"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={THEME.colors.textMuted}
               value={targetValue}
               onChangeText={setTargetValue}
               keyboardType="decimal-pad"
@@ -95,70 +92,45 @@ export default function NewGoalScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ЕДИНИЦА ИЗМЕРЕНИЯ (НЕОБЯЗАТЕЛЬНО)</Text>
+          <Text style={styles.sectionTitle}>Единица измерения (необязательно)</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
-              placeholder="Например, ₽, км, книг, часов"
-              placeholderTextColor="#64748B"
+              placeholder="Например, ₽, $, км, книг, часов"
+              placeholderTextColor={THEME.colors.textMuted}
               value={unit}
               onChangeText={setUnit}
             />
           </View>
-          {/* Быстрые пресеты */}
-          <View style={styles.unitPresets}>
-            {UNIT_PRESETS.map((p) => (
-              <MotionPressable
-                key={p}
-                onPress={() => setUnit(p)}
-                style={[
-                  styles.unitChip,
-                  unit === p && styles.unitChipActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.unitChipText,
-                    unit === p && styles.unitChipTextActive,
-                  ]}
-                >
-                  {p}
-                </Text>
-              </MotionPressable>
-            ))}
-          </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>СРОК / ДЕДЛАЙН (НЕОБЯЗАТЕЛЬНО)</Text>
+          <Text style={styles.sectionTitle}>Срок / дедлайн (необязательно)</Text>
           <View style={styles.inputCard}>
             <TextInput
               style={styles.textInput}
               placeholder="Например, 31.12.2025 или к лету"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={THEME.colors.textMuted}
               value={deadline}
               onChangeText={setDeadline}
             />
           </View>
         </View>
 
-        <MotionPressable
+        <Pressable
+          style={({ pressed }) => [
+            styles.submitButton,
+            saving && styles.submitButtonDisabled,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
           onPress={handleSave}
           disabled={saving}
-          style={styles.submitContainer}
         >
-          <LinearGradient
-            colors={Theme.colors.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.submitButton}
-          >
-            <Text style={styles.submitButtonText}>
-              {saving ? 'Сохранение...' : 'Создать цель'}
-            </Text>
-            <Ionicons name="flag" size={18} color="#FFFFFF" />
-          </LinearGradient>
-        </MotionPressable>
+          <Ionicons name="flag" size={18} color="#FFFFFF" />
+          <Text style={styles.submitButtonText}>
+            {saving ? 'Сохранение...' : 'Поставить цель'}
+          </Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -167,77 +139,54 @@ export default function NewGoalScreen() {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: THEME.colors.background,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#818CF8',
-    letterSpacing: 0.8,
+    color: THEME.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 8,
     marginLeft: 4,
   },
   inputCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: Theme.radii.lg,
+    backgroundColor: THEME.colors.card,
+    borderRadius: THEME.radii.md,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#232E48',
+    borderColor: THEME.colors.border,
+    ...THEME.shadows.card,
   },
   textInput: {
     fontSize: 16,
-    color: '#F8FAFC',
-  },
-  unitPresets: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 10,
-    marginLeft: 4,
-  },
-  unitChip: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: Theme.radii.full,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  unitChipActive: {
-    backgroundColor: '#312E81',
-    borderColor: '#6366F1',
-  },
-  unitChipText: {
-    fontSize: 13,
-    color: '#94A3B8',
-    fontWeight: '600',
-  },
-  unitChipTextActive: {
-    color: '#A5B4FC',
-  },
-  submitContainer: {
-    marginTop: 12,
+    color: THEME.colors.textPrimary,
   },
   submitButton: {
+    backgroundColor: THEME.colors.primary,
     flexDirection: 'row',
-    paddingVertical: 16,
-    borderRadius: Theme.radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 15,
+    borderRadius: THEME.radii.md,
     gap: 8,
-    ...Theme.shadows.glowPrimary,
+    marginTop: 12,
+    ...THEME.shadows.glowIndigo,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
   },
 });

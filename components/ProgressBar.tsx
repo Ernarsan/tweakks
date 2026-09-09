@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, ViewStyle, Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Theme } from '../lib/theme';
+import { View, StyleSheet, Animated, ViewStyle } from 'react-native';
+import { THEME } from '../lib/theme';
 
 interface ProgressBarProps {
   current: number;
@@ -20,18 +19,18 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const ratio = Math.max(0, Math.min(current / safeTarget, 1));
   const isCompleted = current >= target && target > 0;
 
-  const animatedWidth = useRef(new Animated.Value(ratio)).current;
+  const animatedWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.spring(animatedWidth, {
       toValue: ratio,
+      stiffness: 180,
+      damping: 22,
       useNativeDriver: false,
-      friction: 8,
-      tension: 40,
     }).start();
-  }, [ratio]);
+  }, [ratio, animatedWidth]);
 
-  const widthInterpolated = animatedWidth.interpolate({
+  const widthInterpolation = animatedWidth.interpolate({
     inputRange: [0, 1],
     outputRange: ['0%', '100%'],
   });
@@ -49,24 +48,20 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     >
       <Animated.View
         style={[
-          styles.fillContainer,
+          styles.fill,
           {
-            width: widthInterpolated,
+            width: widthInterpolation,
             height,
             borderRadius: height / 2,
+            backgroundColor: isCompleted
+              ? THEME.colors.success
+              : THEME.colors.primary,
           },
+          isCompleted && THEME.shadows.glowEmerald,
         ]}
       >
-        <LinearGradient
-          colors={
-            isCompleted
-              ? (['#10B981', '#34D399'] as [string, string])
-              : (['#6366F1', '#8B5CF6'] as [string, string])
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.gradient, { borderRadius: height / 2 }]}
-        />
+        {/* Внутренний светящийся блик в стиле Aceternity */}
+        <View style={styles.sheen} />
       </Animated.View>
     </View>
   );
@@ -75,16 +70,20 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 const styles = StyleSheet.create({
   track: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#E2E8F0',
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    position: 'relative',
   },
-  fillContainer: {
+  fill: {
+    position: 'relative',
     overflow: 'hidden',
   },
-  gradient: {
-    width: '100%',
-    height: '100%',
+  sheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
   },
 });

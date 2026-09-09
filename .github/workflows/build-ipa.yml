@@ -5,58 +5,61 @@ on:
   push:
     branches: [ main, master ]
 
+permissions:
+  contents: write
+
 jobs:
   build-ipa:
     runs-on: macos-14
     steps:
-      - name: ⬇️ Проверка репозитория
+      - name: ⬇️ Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Настройка Node.js
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: 📦 Установка зависимостей
+      - name: 📦 Install npm dependencies
         run: npm install --legacy-peer-deps
 
-      - name: 🔗 Настройка окружения Node для Xcode
+      - name: 📱 Select Xcode and prebuild iOS project
         run: |
-          sudo mkdir -p /usr/local/bin
-          sudo ln -sf $(which node) /usr/local/bin/node
-          sudo ln -sf $(which node) /opt/homebrew/bin/node 2>/dev/null || true
-          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
-
-      - name: 📱 Выбор Xcode и генерация проекта
-        run: |
-          sudo gem install cocoapods
-          sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          for xcode in /Applications/Xcode_16*.app /Applications/Xcode*.app; do
+            if [ -d "$xcode" ]; then
+              echo "Selecting $xcode"
+              sudo xcode-select -s "$xcode/Contents/Developer"
+              break
+            fi
+          done
           xcodebuild -version
-          CI=false npx expo prebuild --platform ios --clean
+          npx expo prebuild --platform ios --clean --no-install
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
-          echo "=== Files in ios directory ==="
+          echo "=== ios folder generated ==="
           ls -la ios
 
-      - name: ⚙️ Сборка .app через Xcode (Real iPhone ARM64)
+      - name: 🍫 Install CocoaPods dependencies
         run: |
           cd ios
-          echo "Listing ios directory:"
+          pod install --repo-update
+          echo "=== iOS Directory Content after pod install ==="
           ls -la
-          
-          if [ -d "TaskGoalsApp.xcworkspace" ]; then
-            TARGET="-workspace TaskGoalsApp.xcworkspace"
-          elif ls *.xcworkspace 1>/dev/null 2>&1; then
-            TARGET="-workspace $(ls -d *.xcworkspace | head -n 1)"
-          else
-            TARGET="-project $(ls -d *.xcodeproj | head -n 1)"
+          cd ..
+
+      - name: ⚙️ Build .app via Xcode (Real iPhone ARM64)
+        run: |
+          cd ios
+          if [ ! -d "TaskGoalsApp.xcworkspace" ]; then
+            echo "Error: TaskGoalsApp.xcworkspace does not exist!"
+            ls -la
+            exit 1
           fi
-          echo "Building target: $TARGET"
-          
+
           set -o pipefail
           xcodebuild \
-            $TARGET \
-            -scheme "TaskGoalsApp" \
+            -workspace TaskGoalsApp.xcworkspace \
+            -scheme TaskGoalsApp \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
@@ -65,34 +68,48 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER="" 2>&1 | tee xcode_build.log || {
-              LOG_HEAD=$(head -n 25 xcode_build.log | tr '\n' ' ' | tr -d '"' | cut -c 1-400)
-              LOG_TAIL=$(tail -n 25 xcode_build.log | tr '\n' ' ' | tr -d '"' | cut -c 1-400)
-              echo "::error title=XcodeLogHead::$LOG_HEAD"
-              echo "::error title=XcodeLogTail::$LOG_TAIL"
+              echo "::error::Xcode build failed. Showing last 80 lines of log:"
+              tail -n 80 xcode_build.log
               exit 1
             }
+          cd ..
 
-      - name: 📦 Упаковка в .ipa
+      - name: 📦 Package into TaskGoalsApp.ipa
         run: |
           mkdir -p build/Payload
-          APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
-          echo "Packaging application from: $APP_PATH"
+          APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -name "*.app" -type d | head -n 1)
+          echo "Found .app at: $APP_PATH"
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: .app not found!"
+            exit 1
+          fi
           cp -r "$APP_PATH" build/Payload/
           cd build
           zip -r TaskGoalsApp.ipa Payload
           cd ..
+          ls -lh build/TaskGoalsApp.ipa
 
-      - name: 🚀 Выгрузка готового TaskGoalsApp.ipa
+      - name: 🚀 Upload TaskGoalsApp.ipa artifact
         uses: actions/upload-artifact@v4
         with:
           name: TaskGoalsApp-ipa
           path: build/TaskGoalsApp.ipa
           retention-days: 14
 
-      - name: 📝 Выгрузка лога сборки при ошибке
+      - name: 🌟 Create GitHub Release with IPA
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "TaskGoalsApp v1.0.${{ github.run_number }}"
+          body: "Готовый к установке iOS IPA файл приложения «Задачи и цели» с обновленным дизайном в стиле Aceternity UI, 21st.dev и Framer Motion."
+          files: build/TaskGoalsApp.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📝 Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: xcode-error-log
           path: ios/xcode_build.log
-

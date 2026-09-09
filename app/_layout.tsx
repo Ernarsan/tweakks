@@ -3,7 +3,7 @@ import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { initDatabase } from '../lib/db';
-import { Theme } from '../lib/theme';
+import { THEME } from '../lib/theme';
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
@@ -29,27 +29,27 @@ export default function RootLayout() {
   if (!dbReady) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color={THEME.colors.primary} />
       </View>
     );
   }
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#0B0F19',
+            backgroundColor: THEME.colors.card,
           },
-          headerTintColor: '#818CF8',
+          headerTintColor: THEME.colors.primary,
           headerTitleStyle: {
-            fontWeight: '700',
-            color: '#F8FAFC',
+            fontWeight: '800',
+            color: THEME.colors.textPrimary,
           },
           headerShadowVisible: false,
           contentStyle: {
-            backgroundColor: '#0B0F19',
+            backgroundColor: THEME.colors.background,
           },
         }}
       >
@@ -97,11 +97,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0B0F19',
+    backgroundColor: THEME.colors.background,
   },
   errorText: {
     fontSize: 16,
-    color: '#EF4444',
+    color: THEME.colors.destructive,
     textAlign: 'center',
   },
 });
