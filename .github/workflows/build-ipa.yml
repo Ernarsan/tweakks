@@ -73,6 +73,31 @@ jobs:
             console.log('✅ Patched RuntimeScheduler.h');
           }
 
+          console.log('Patching JavaScriptRuntime.swift to prevent actor isolation sending errors...');
+          const jsRuntimePath = 'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift';
+          if (fs.existsSync(jsRuntimePath)) {
+            let jr = fs.readFileSync(jsRuntimePath, 'utf8');
+            jr = jr.replace(
+              /resultPtr\.pointee = JavaScriptActor\.assumeIsolated \{\s+return forwardingSwiftErrorsToJS\(runtime: runtime\) \{\s+let this = UnsafeMutablePointer\(mutating: thisPtr\)\.move\(\)/g,
+              'resultPtr.pointee = JavaScriptActor.assumeIsolated {\n        nonisolated(unsafe) let thisPtr = thisPtr\n        nonisolated(unsafe) let argumentsPtr = argumentsPtr\n        return forwardingSwiftErrorsToJS(runtime: runtime) {\n          let this = UnsafeMutablePointer(mutating: thisPtr).move()'
+            );
+            jr = jr.replace(
+              /resultPtr\.pointee = JavaScriptActor\.assumeIsolated \{\s+return forwardingSwiftErrorsToJS\(runtime: runtime\) \{\s+let arguments = JavaScriptValuesBuffer\(runtime, start: argumentsPtr/g,
+              'resultPtr.pointee = JavaScriptActor.assumeIsolated {\n        nonisolated(unsafe) let thisPtr = thisPtr\n        nonisolated(unsafe) let argumentsPtr = argumentsPtr\n        return forwardingSwiftErrorsToJS(runtime: runtime) {\n          let arguments = JavaScriptValuesBuffer(runtime, start: argumentsPtr'
+            );
+            fs.writeFileSync(jsRuntimePath, jr);
+            console.log('✅ Patched JavaScriptRuntime.swift');
+          }
+
+          console.log('Setting swiftLanguageModes to [.v5] in ExpoModulesJSI Package.swift...');
+          const pkgPath = 'node_modules/expo-modules-jsi/apple/Package.swift';
+          if (fs.existsSync(pkgPath)) {
+            let pkg = fs.readFileSync(pkgPath, 'utf8');
+            pkg = pkg.replace(/swiftLanguageModes:\s*\[\.v6\]/g, 'swiftLanguageModes: [.v5]');
+            fs.writeFileSync(pkgPath, pkg);
+            console.log('✅ Patched Package.swift');
+          }
+
           console.log('✅ Swift compatibility patches applied successfully');
           "
 
