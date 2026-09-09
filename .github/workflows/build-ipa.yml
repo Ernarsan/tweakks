@@ -78,10 +78,7 @@ jobs:
           if (fs.existsSync(jsRuntimePath)) {
             let jr = fs.readFileSync(jsRuntimePath, 'utf8');
             jr = jr.replace(/nonisolated\(unsafe\) let thisPtr = thisPtr\s+nonisolated\(unsafe\) let argumentsPtr = argumentsPtr\s+nonisolated\(unsafe\) let resultPtr = resultPtr/g,
-              'let safeThis = NonisolatedUnsafeVar(thisPtr)\n    let safeArgs = NonisolatedUnsafeVar(argumentsPtr)\n    let safeResult = NonisolatedUnsafeVar(resultPtr)'
-            );
-            jr = jr.replace(/resultPtr\.pointee = JavaScriptActor\.assumeIsolated/g,
-              'safeResult.value.pointee = JavaScriptActor.assumeIsolated'
+              'let safeThis = NonisolatedUnsafeVar(thisPtr)\n    let safeArgs = NonisolatedUnsafeVar(argumentsPtr)\n    nonisolated(unsafe) let resultPtr = resultPtr'
             );
             jr = jr.replace(/UnsafeMutablePointer\(mutating: thisPtr\)\.move\(\)/g,
               'UnsafeMutablePointer(mutating: safeThis.value!).move()'
