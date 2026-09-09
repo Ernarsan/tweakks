@@ -36,57 +36,87 @@ jobs:
           xcodebuild -version
           npx expo prebuild --platform ios --clean --no-install
           echo "export NODE_BINARY=$(which node)" > ios/.xcode.env.local
-          echo "=== ios folder generated ==="
-          ls -la ios
+
+      - name: 🔧 Patch Podfile and Project for Unsigned Build
+        run: |
+          node -e "
+          const fs = require('fs');
+          let podfile = fs.readFileSync('ios/Podfile', 'utf8');
+          const hook = \`
+              installer.pods_project.targets.each do |target|
+                target.build_configurations.each do |config|
+                  config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+                  config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+                  config.build_settings['CODE_SIGN_IDENTITY'] = ''
+                  config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ''
+                end
+              end
+          \`;
+          if (podfile.includes('post_install do |installer|')) {
+            podfile = podfile.replace(/post_install do \|installer\|/, 'post_install do |installer|' + hook);
+          } else {
+            podfile += '\npost_install do |installer|\n' + hook + '\nend\n';
+          }
+          fs.writeFileSync('ios/Podfile', podfile);
+          console.log('✅ Podfile successfully patched');
+
+          let pbx = fs.readFileSync('ios/TaskGoalsApp.xcodeproj/project.pbxproj', 'utf8');
+          pbx = pbx.replace(/CODE_SIGN_STYLE = Automatic;/g, 'CODE_SIGN_STYLE = Manual;');
+          pbx = pbx.replace(/ProvisioningStyle = Automatic;/g, 'ProvisioningStyle = Manual;');
+          pbx = pbx.replace(/CODE_SIGNING_ALLOWED = YES;/g, 'CODE_SIGNING_ALLOWED = NO;');
+          pbx = pbx.replace(/DevelopmentTeam = [^;]+;/g, 'DevelopmentTeam = \"\";');
+          pbx = pbx.replace(/buildSettings = \{/g, 'buildSettings = {\n\t\t\t\tCODE_SIGNING_ALLOWED = NO;\n\t\t\t\tCODE_SIGNING_REQUIRED = NO;\n\t\t\t\tCODE_SIGN_IDENTITY = \"\";');
+          fs.writeFileSync('ios/TaskGoalsApp.xcodeproj/project.pbxproj', pbx);
+          console.log('✅ project.pbxproj successfully patched');
+          "
 
       - name: 🍫 Install CocoaPods dependencies
         run: |
           cd ios
           pod install --repo-update
-          echo "=== iOS Directory Content after pod install ==="
+          echo "=== ios workspace generated ==="
           ls -la
           cd ..
 
-      - name: ⚙️ Build .app via Xcode (Real iPhone ARM64)
+      - name: ⚙️ Build Archive via Xcode (Real iPhone ARM64)
         run: |
-          cd ios
-          if [ ! -d "TaskGoalsApp.xcworkspace" ]; then
-            echo "Error: TaskGoalsApp.xcworkspace does not exist!"
-            ls -la
-            exit 1
-          fi
-
+          mkdir -p build
           set -o pipefail
-          xcodebuild \
-            -workspace TaskGoalsApp.xcworkspace \
+          xcodebuild archive \
+            -workspace ios/TaskGoalsApp.xcworkspace \
             -scheme TaskGoalsApp \
+            -archivePath build/TaskGoalsApp.xcarchive \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -derivedDataPath build \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
+            EXPANDED_CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
             PROVISIONING_PROFILE_SPECIFIER="" 2>&1 | tee xcode_build.log || {
-              echo "::error::Xcode build failed. Showing last 80 lines of log:"
-              tail -n 80 xcode_build.log
+              echo "### ❌ Xcode Build Error Log" >> $GITHUB_STEP_SUMMARY
+              echo '```text' >> $GITHUB_STEP_SUMMARY
+              tail -n 120 xcode_build.log >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
               exit 1
             }
-          cd ..
 
       - name: 📦 Package into TaskGoalsApp.ipa
         run: |
           mkdir -p build/Payload
-          APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -name "*.app" -type d | head -n 1)
+          APP_PATH=$(find build/TaskGoalsApp.xcarchive/Products/Applications -name "*.app" -type d | head -n 1)
           echo "Found .app at: $APP_PATH"
           if [ -z "$APP_PATH" ]; then
-            echo "Error: .app not found!"
+            echo "Error: .app not found in archive!"
+            ls -la build/TaskGoalsApp.xcarchive/Products/Applications
             exit 1
           fi
           cp -r "$APP_PATH" build/Payload/
           cd build
           zip -r TaskGoalsApp.ipa Payload
           cd ..
+          echo "### 🎉 IPA Successfully Built" >> $GITHUB_STEP_SUMMARY
           ls -lh build/TaskGoalsApp.ipa
 
       - name: 🚀 Upload TaskGoalsApp.ipa artifact
@@ -112,4 +142,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: xcode-error-log
-          path: ios/xcode_build.log
+          path: xcode_build.log
