@@ -26,7 +26,7 @@ jobs:
 
       - name: 📱 Select Xcode
         run: |
-          for xcode in /Applications/Xcode_26*.app /Applications/Xcode_16*.app /Applications/Xcode*.app; do
+          for xcode in /Applications/Xcode_16.4*.app /Applications/Xcode_16*.app /Applications/Xcode*.app; do
             if [ -d "$xcode" ]; then
               echo "Selecting $xcode"
               sudo xcode-select -s "$xcode/Contents/Developer"
@@ -36,45 +36,53 @@ jobs:
           xcodebuild -version
           swift -version
 
-      - name: 🛠️ Ensure Swift tools compatibility for Expo Modules
+      - name: 🛠️ Ensure Swift compatibility for Expo Modules
         run: |
           node -e "
           const fs = require('fs');
           const path = require('path');
-          const { execSync } = require('child_process');
 
-          let swiftVer = '';
-          try {
-            swiftVer = execSync('swift -version', { encoding: 'utf8' });
-          } catch(e) {}
-          console.log('Detected Swift:', swiftVer.trim());
-
-          const isSwift62OrHigher = swiftVer.includes('Swift version 6.2') || swiftVer.includes('Swift version 26');
-          if (!isSwift62OrHigher) {
-            console.log('Swift < 6.2 detected. Patching Package.swift files for compatibility...');
-            function patchPackages(dir) {
-              if (!fs.existsSync(dir)) return;
-              for (const f of fs.readdirSync(dir)) {
-                const full = path.join(dir, f);
-                if (fs.statSync(full).isDirectory()) {
-                  if (f !== '.git') patchPackages(full);
-                } else if (f === 'Package.swift') {
-                  let c = fs.readFileSync(full, 'utf8');
-                  if (c.includes('swift-tools-version: 6.2')) {
-                    console.log('Patching:', full);
-                    c = c.replace(/\/\/ swift-tools-version: 6\.2/, '// swift-tools-version: 6.0');
-                    c = c.replace(/\.enableUpcomingFeature\(\"NonisolatedNonsendingByDefault\"\),?/g, '');
-                    c = c.replace(/\.enableUpcomingFeature\(\"InferIsolatedConformances\"\),?/g, '');
-                    c = c.replace(/from: \"602\.0\.0-latest\"/, 'from: \"600.0.0-latest\"');
-                    fs.writeFileSync(full, c);
-                  }
+          console.log('Patching weak let -> weak var in ExpoModulesJSI...');
+          function fixWeakLet(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const f of fs.readdirSync(dir)) {
+              const full = path.join(dir, f);
+              if (fs.statSync(full).isDirectory()) {
+                if (f !== '.git') fixWeakLet(full);
+              } else if (f.endsWith('.swift')) {
+                let c = fs.readFileSync(full, 'utf8');
+                if (c.includes('weak let')) {
+                  console.log('Patching weak let in:', full);
+                  c = c.replace(/weak let/g, 'weak var');
+                  fs.writeFileSync(full, c);
                 }
               }
             }
-            patchPackages('node_modules');
-          } else {
-            console.log('Swift 6.2+ available, keeping native Package.swift settings');
           }
+          fixWeakLet('node_modules/expo-modules-jsi');
+
+          console.log('Patching Package.swift to swift-tools-version: 6.0...');
+          function patchPackages(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const f of fs.readdirSync(dir)) {
+              const full = path.join(dir, f);
+              if (fs.statSync(full).isDirectory()) {
+                if (f !== '.git') patchPackages(full);
+              } else if (f === 'Package.swift') {
+                let c = fs.readFileSync(full, 'utf8');
+                if (c.includes('swift-tools-version: 6.2')) {
+                  console.log('Patching Package.swift:', full);
+                  c = c.replace(/\/\/ swift-tools-version: 6\.2/, '// swift-tools-version: 6.0');
+                  c = c.replace(/\.enableUpcomingFeature\(\"NonisolatedNonsendingByDefault\"\),?/g, '');
+                  c = c.replace(/\.enableUpcomingFeature\(\"InferIsolatedConformances\"\),?/g, '');
+                  c = c.replace(/from: \"602\.0\.0-latest\"/, 'from: \"600.0.0-latest\"');
+                  fs.writeFileSync(full, c);
+                }
+              }
+            }
+          }
+          patchPackages('node_modules');
+          console.log('✅ Swift compatibility patches applied successfully');
           "
 
       - name: 📱 Prebuild iOS project
