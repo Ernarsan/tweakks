@@ -26,7 +26,7 @@ jobs:
 
       - name: 📱 Select Xcode
         run: |
-          for xcode in /Applications/Xcode_16.4*.app /Applications/Xcode_16*.app /Applications/Xcode*.app; do
+          for xcode in /Applications/Xcode_26*.app /Applications/Xcode*.app; do
             if [ -d "$xcode" ]; then
               echo "Selecting $xcode"
               sudo xcode-select -s "$xcode/Contents/Developer"
@@ -42,46 +42,27 @@ jobs:
           const fs = require('fs');
           const path = require('path');
 
-          console.log('Patching weak let -> weak var in ExpoModulesJSI...');
-          function fixWeakLet(dir) {
+          console.log('Patching weak let -> nonisolated(unsafe) weak var in node_modules...');
+          function patchWeakLet(dir) {
             if (!fs.existsSync(dir)) return;
             for (const f of fs.readdirSync(dir)) {
               const full = path.join(dir, f);
               if (fs.statSync(full).isDirectory()) {
-                if (f !== '.git') fixWeakLet(full);
+                if (f !== '.git') patchWeakLet(full);
               } else if (f.endsWith('.swift')) {
                 let c = fs.readFileSync(full, 'utf8');
-                if (c.includes('weak let')) {
+                if (c.includes('weak let') || c.includes('weak var runtime')) {
                   console.log('Patching weak let in:', full);
-                  c = c.replace(/weak let/g, 'weak var');
+                  c = c.replace(/nonisolated\(unsafe\)\s+weak\s+let/g, 'nonisolated(unsafe) weak var');
+                  c = c.replace(/weak\s+let/g, 'nonisolated(unsafe) weak var');
+                  c = c.replace(/(?<!nonisolated\(unsafe\)\s+)weak\s+var\s+runtime/g, 'nonisolated(unsafe) weak var runtime');
+                  c = c.replace(/nonisolated\(unsafe\)\s+nonisolated\(unsafe\)/g, 'nonisolated(unsafe)');
                   fs.writeFileSync(full, c);
                 }
               }
             }
           }
-          fixWeakLet('node_modules/expo-modules-jsi');
-
-          console.log('Patching Package.swift to swift-tools-version: 6.0...');
-          function patchPackages(dir) {
-            if (!fs.existsSync(dir)) return;
-            for (const f of fs.readdirSync(dir)) {
-              const full = path.join(dir, f);
-              if (fs.statSync(full).isDirectory()) {
-                if (f !== '.git') patchPackages(full);
-              } else if (f === 'Package.swift') {
-                let c = fs.readFileSync(full, 'utf8');
-                if (c.includes('swift-tools-version: 6.2')) {
-                  console.log('Patching Package.swift:', full);
-                  c = c.replace(/\/\/ swift-tools-version: 6\.2/, '// swift-tools-version: 6.0');
-                  c = c.replace(/\.enableUpcomingFeature\(\"NonisolatedNonsendingByDefault\"\),?/g, '');
-                  c = c.replace(/\.enableUpcomingFeature\(\"InferIsolatedConformances\"\),?/g, '');
-                  c = c.replace(/from: \"602\.0\.0-latest\"/, 'from: \"600.0.0-latest\"');
-                  fs.writeFileSync(full, c);
-                }
-              }
-            }
-          }
-          patchPackages('node_modules');
+          patchWeakLet('node_modules');
           console.log('✅ Swift compatibility patches applied successfully');
           "
 
