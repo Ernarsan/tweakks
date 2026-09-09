@@ -63,6 +63,16 @@ jobs:
             }
           }
           patchWeakLet('node_modules');
+
+          console.log('Patching RuntimeScheduler.h to remove SWIFT_RETURNS_RETAINED...');
+          const rsPath = 'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h';
+          if (fs.existsSync(rsPath)) {
+            let rs = fs.readFileSync(rsPath, 'utf8');
+            rs = rs.replace(/SWIFT_RETURNS_RETAINED\s+/g, '');
+            fs.writeFileSync(rsPath, rs);
+            console.log('✅ Patched RuntimeScheduler.h');
+          }
+
           console.log('✅ Swift compatibility patches applied successfully');
           "
 
